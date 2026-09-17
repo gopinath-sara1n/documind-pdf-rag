@@ -1,0 +1,9 @@
+streamlit
+docling
+google-genai
+faiss-cpu
+requests
+numpy
+pillow
+pandas
+pypdf
