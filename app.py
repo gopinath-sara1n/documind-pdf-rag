@@ -38,373 +38,707 @@ st.markdown(
     """
 <style>
 
-    /* ========================================================
-       GLOBAL
-       ======================================================== */
+/* ============================================================
+   GLOBAL
+   ============================================================ */
+
+.block-container {
+    max-width: 1280px;
+    padding-top: 1.3rem;
+    padding-bottom: 4rem;
+}
+
+
+/* ============================================================
+   BRAND HEADER
+   ============================================================ */
+
+.brand-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 1.4rem;
+}
+
+.brand-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.brand-icon {
+    width: 54px;
+    height: 54px;
+    min-width: 54px;
+
+    border-radius: 17px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #6366f1 0%,
+            #8b5cf6 50%,
+            #ec4899 100%
+        );
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 26px;
+
+    box-shadow:
+        0 10px 28px
+        rgba(99,102,241,.25);
+}
+
+.brand-title {
+    font-size: 1.4rem;
+    font-weight: 850;
+    line-height: 1.1;
+}
+
+.brand-subtitle {
+    font-size: .78rem;
+    opacity: .58;
+    margin-top: 4px;
+}
+
+.status-pill {
+    padding: 8px 15px;
+
+    border-radius: 999px;
+
+    background:
+        rgba(16,185,129,.09);
+
+    color: #059669;
+
+    border:
+        1px solid
+        rgba(16,185,129,.18);
+
+    font-size: .75rem;
+    font-weight: 750;
+
+    white-space: nowrap;
+}
+
+
+/* ============================================================
+   TABS
+   ============================================================ */
+
+div[data-baseweb="tab-list"] {
+    gap: 8px;
+    margin-bottom: 24px;
+}
+
+button[data-baseweb="tab"] {
+    padding: 12px 22px;
+    font-size: 1rem;
+    font-weight: 750;
+}
+
+
+/* ============================================================
+   HERO
+   ============================================================ */
+
+.hero {
+    position: relative;
+    overflow: hidden;
+
+    min-height: 245px;
+
+    padding: 42px 46px;
+
+    border-radius: 27px;
+
+    margin-bottom: 25px;
+
+    background:
+        radial-gradient(
+            circle at 92% 12%,
+            rgba(236,72,153,.48),
+            transparent 29%
+        ),
+        radial-gradient(
+            circle at 72% 105%,
+            rgba(139,92,246,.42),
+            transparent 36%
+        ),
+        linear-gradient(
+            135deg,
+            #312e81 0%,
+            #4f46e5 43%,
+            #7c3aed 72%,
+            #be185d 100%
+        );
+
+    color: white;
+
+    box-shadow:
+        0 20px 48px
+        rgba(79,70,229,.22);
+}
+
+.hero-badge {
+    display: inline-flex;
+
+    align-items: center;
+
+    padding: 7px 14px;
+
+    border-radius: 999px;
+
+    background:
+        rgba(255,255,255,.13);
+
+    border:
+        1px solid
+        rgba(255,255,255,.19);
+
+    font-size: .75rem;
+    font-weight: 700;
+
+    margin-bottom: 16px;
+}
+
+.hero h1 {
+    margin: 0;
+
+    font-size: 2.55rem;
+
+    line-height: 1.15;
+
+    font-weight: 850;
+
+    letter-spacing: -.045em;
+}
+
+.hero p {
+    margin: 15px 0 0 0;
+
+    max-width: 780px;
+
+    font-size: 1rem;
+
+    line-height: 1.65;
+
+    color:
+        rgba(255,255,255,.88);
+}
+
+
+/* ============================================================
+   UPLOAD AREA
+   ============================================================ */
+
+.upload-card {
+    min-height: 220px;
+
+    padding: 42px 30px;
+
+    border-radius: 24px;
+
+    border:
+        2px dashed
+        rgba(99,102,241,.28);
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(99,102,241,.07),
+            rgba(139,92,246,.045),
+            rgba(236,72,153,.035)
+        );
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    justify-content: center;
+
+    text-align: center;
+
+    margin-bottom: 14px;
+
+    box-shadow:
+        inset 0 1px 0
+        rgba(255,255,255,.35);
+}
+
+.upload-icon {
+    width: 68px;
+    height: 68px;
+
+    border-radius: 20px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 2rem;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(99,102,241,.13),
+            rgba(236,72,153,.12)
+        );
+
+    margin-bottom: 14px;
+}
+
+.upload-title {
+    font-size: 1.3rem;
+
+    font-weight: 820;
+
+    margin-bottom: 7px;
+}
+
+.upload-text {
+    font-size: .9rem;
+
+    opacity: .60;
+
+    max-width: 540px;
+
+    line-height: 1.55;
+}
+
+
+/* ============================================================
+   ACTUAL STREAMLIT FILE UPLOADER
+   ============================================================ */
+
+div[data-testid="stFileUploader"] {
+    margin-top: 8px;
+}
+
+div[data-testid="stFileUploaderDropzone"] {
+    min-height: 145px;
+
+    border-radius: 19px !important;
+
+    border:
+        1px solid
+        rgba(99,102,241,.18) !important;
+
+    background:
+        rgba(99,102,241,.025) !important;
+
+    transition:
+        border-color .2s ease,
+        background .2s ease;
+}
+
+div[data-testid="stFileUploaderDropzone"]:hover {
+    border-color:
+        rgba(99,102,241,.42) !important;
+
+    background:
+        rgba(99,102,241,.055) !important;
+}
+
+
+/* ============================================================
+   FILE SIZE
+   ============================================================ */
+
+.file-limit {
+    text-align: center;
+
+    font-size: .78rem;
+
+    opacity: .55;
+
+    margin-top: 9px;
+
+    margin-bottom: 8px;
+}
+
+
+/* ============================================================
+   CAPABILITY CARD
+   ============================================================ */
+
+.capability-card {
+    width: 100%;
+
+    padding: 26px 28px;
+
+    border-radius: 23px;
+
+    border:
+        1px solid
+        rgba(99,102,241,.15);
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(99,102,241,.055),
+            rgba(139,92,246,.04),
+            rgba(236,72,153,.035)
+        );
+
+    margin-top: 20px;
+
+    margin-bottom: 20px;
+
+    box-sizing: border-box;
+}
+
+.capability-title {
+    font-size: 1.05rem;
+
+    font-weight: 820;
+
+    margin-bottom: 17px;
+}
+
+
+/* ============================================================
+   PIPELINE / CAPABILITY BADGES
+   ============================================================ */
+
+.pipeline {
+    display: flex;
+
+    flex-wrap: wrap;
+
+    align-items: center;
+
+    gap: 10px;
+}
+
+.pipeline-step {
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    padding: 9px 14px;
+
+    border-radius: 999px;
+
+    background:
+        rgba(99,102,241,.08);
+
+    border:
+        1px solid
+        rgba(99,102,241,.13);
+
+    font-size: .77rem;
+
+    font-weight: 700;
+
+    white-space: nowrap;
+}
+
+
+/* ============================================================
+   GENERAL CARD
+   ============================================================ */
+
+.card {
+    width: 100%;
+
+    padding: 25px;
+
+    border-radius: 21px;
+
+    border:
+        1px solid
+        rgba(128,128,128,.17);
+
+    background:
+        rgba(128,128,128,.035);
+
+    margin-top: 18px;
+
+    margin-bottom: 18px;
+
+    box-sizing: border-box;
+}
+
+
+/* ============================================================
+   DOCUMENT READY
+   ============================================================ */
+
+.document-ready {
+    padding: 17px 20px;
+
+    border-radius: 17px;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(16,185,129,.075),
+            rgba(34,197,94,.035)
+        );
+
+    border:
+        1px solid
+        rgba(16,185,129,.18);
+
+    margin-bottom: 18px;
+}
+
+.document-name {
+    font-weight: 820;
+
+    word-break: break-word;
+}
+
+.document-status {
+    font-size: .78rem;
+
+    opacity: .60;
+
+    margin-top: 4px;
+}
+
+
+/* ============================================================
+   METRICS
+   ============================================================ */
+
+.metric-card {
+    padding: 19px 12px;
+
+    min-height: 120px;
+
+    border-radius: 20px;
+
+    border:
+        1px solid
+        rgba(128,128,128,.17);
+
+    background:
+        rgba(128,128,128,.035);
+
+    text-align: center;
+
+    box-sizing: border-box;
+}
+
+.metric-icon {
+    font-size: 1.25rem;
+}
+
+.metric-value {
+    font-size: 1.65rem;
+
+    font-weight: 820;
+
+    margin-top: 5px;
+}
+
+.metric-label {
+    font-size: .75rem;
+
+    opacity: .58;
+
+    margin-top: 3px;
+}
+
+
+/* ============================================================
+   CHAT HEADER
+   ============================================================ */
+
+.gradient-card {
+    padding: 25px 28px;
+
+    border-radius: 22px;
+
+    color: white;
+
+    background:
+        linear-gradient(
+            135deg,
+            #4f46e5,
+            #7c3aed 55%,
+            #db2777
+        );
+
+    box-shadow:
+        0 12px 35px
+        rgba(99,102,241,.18);
+
+    margin: 25px 0 20px 0;
+}
+
+.gradient-card h3 {
+    margin: 0 0 6px 0;
+}
+
+.gradient-card p {
+    margin: 0;
+
+    opacity: .88;
+
+    line-height: 1.55;
+}
+
+
+/* ============================================================
+   SECTION LABEL
+   ============================================================ */
+
+.section-label {
+    font-size: .75rem;
+
+    font-weight: 800;
+
+    text-transform: uppercase;
+
+    letter-spacing: .08em;
+
+    opacity: .55;
+
+    margin: 22px 0 10px 0;
+}
+
+
+/* ============================================================
+   ABOUT CARDS
+   ============================================================ */
+
+.about-card {
+    padding: 25px;
+
+    border-radius: 20px;
+
+    border:
+        1px solid
+        rgba(128,128,128,.17);
+
+    background:
+        rgba(128,128,128,.035);
+
+    min-height: 175px;
+
+    box-sizing: border-box;
+}
+
+.about-icon {
+    font-size: 1.8rem;
+
+    margin-bottom: 10px;
+}
+
+.about-title {
+    font-weight: 800;
+
+    font-size: 1rem;
+
+    margin-bottom: 8px;
+}
+
+.about-text {
+    font-size: .86rem;
+
+    line-height: 1.6;
+
+    opacity: .65;
+}
+
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+
+.stButton > button {
+    border-radius: 12px;
+
+    font-weight: 700;
+
+    min-height: 2.7rem;
+}
+
+
+/* ============================================================
+   CHAT
+   ============================================================ */
+
+div[data-testid="stChatMessage"] {
+    border-radius: 17px;
+}
+
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+
+.footer {
+    text-align: center;
+
+    margin-top: 45px;
+
+    padding-top: 20px;
+
+    border-top:
+        1px solid
+        rgba(128,128,128,.15);
+
+    font-size: .75rem;
+
+    opacity: .5;
+}
+
+
+/* ============================================================
+   MOBILE RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 768px) {
 
     .block-container {
-        max-width: 1280px;
-        padding-top: 1.2rem;
-        padding-bottom: 4rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
     }
-
-    /* ========================================================
-       TOP BRAND HEADER
-       ======================================================== */
 
     .brand-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 1rem;
-    }
-
-    .brand-left {
-        display: flex;
-        align-items: center;
-        gap: 0.8rem;
-    }
-
-    .brand-icon {
-        width: 48px;
-        height: 48px;
-        border-radius: 15px;
-        background: linear-gradient(
-            135deg,
-            #6366f1,
-            #8b5cf6,
-            #ec4899
-        );
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.55rem;
-        box-shadow: 0 8px 25px rgba(99,102,241,.25);
-    }
-
-    .brand-title {
-        font-size: 1.35rem;
-        font-weight: 800;
-        line-height: 1.1;
-    }
-
-    .brand-subtitle {
-        font-size: .78rem;
-        opacity: .62;
-        margin-top: .15rem;
+        align-items: flex-start;
     }
 
     .status-pill {
-        padding: .45rem .8rem;
-        border-radius: 999px;
-        font-size: .75rem;
-        font-weight: 700;
-        background: rgba(16,185,129,.10);
-        color: #059669;
-        border: 1px solid rgba(16,185,129,.18);
+        display: none;
     }
 
-
-    /* ========================================================
-       HERO
-       ======================================================== */
-
     .hero {
-        position: relative;
-        overflow: hidden;
-        padding: 2rem 2.1rem;
-        border-radius: 25px;
-        margin-bottom: 1.25rem;
-
-        background:
-            radial-gradient(
-                circle at 90% 15%,
-                rgba(236,72,153,.45),
-                transparent 30%
-            ),
-            radial-gradient(
-                circle at 70% 100%,
-                rgba(139,92,246,.38),
-                transparent 35%
-            ),
-            linear-gradient(
-                135deg,
-                #312e81 0%,
-                #4f46e5 40%,
-                #7c3aed 72%,
-                #be185d 100%
-            );
-
-        color: white;
-        box-shadow: 0 18px 45px rgba(79,70,229,.20);
+        min-height: auto;
+        padding: 30px 25px;
     }
 
     .hero h1 {
-        margin: 0;
-        font-size: 2.45rem;
-        font-weight: 850;
-        letter-spacing: -0.045em;
+        font-size: 2rem;
     }
 
     .hero p {
-        margin: .65rem 0 0 0;
-        color: rgba(255,255,255,.86);
-        font-size: 1.02rem;
-        max-width: 760px;
-        line-height: 1.55;
+        font-size: .92rem;
     }
-
-    .hero-badge {
-        display: inline-block;
-        padding: .35rem .65rem;
-        border-radius: 999px;
-        background: rgba(255,255,255,.14);
-        border: 1px solid rgba(255,255,255,.18);
-        font-size: .72rem;
-        font-weight: 700;
-        margin-bottom: .75rem;
-    }
-
-
-    /* ========================================================
-       TABS
-       ======================================================== */
-
-    button[data-baseweb="tab"] {
-        font-size: 1rem;
-        font-weight: 700;
-        padding: .75rem 1.35rem;
-    }
-
-    div[data-baseweb="tab-list"] {
-        gap: .45rem;
-        margin-bottom: 1.5rem;
-    }
-
-
-    /* ========================================================
-       CARDS
-       ======================================================== */
-
-    .card {
-        padding: 1.15rem 1.25rem;
-        border-radius: 18px;
-        border: 1px solid rgba(128,128,128,.18);
-        background: rgba(128,128,128,.035);
-        margin-bottom: 1rem;
-    }
-
-    .gradient-card {
-        padding: 1.35rem;
-        border-radius: 20px;
-        color: white;
-        background:
-            linear-gradient(
-                135deg,
-                #4f46e5,
-                #7c3aed 55%,
-                #db2777
-            );
-        box-shadow: 0 12px 35px rgba(99,102,241,.18);
-        margin-bottom: 1rem;
-    }
-
-    .gradient-card h3 {
-        margin: 0 0 .4rem 0;
-    }
-
-    .gradient-card p {
-        margin: 0;
-        opacity: .88;
-        line-height: 1.5;
-    }
-
-
-    /* ========================================================
-       UPLOAD CARD
-       ======================================================== */
 
     .upload-card {
-        padding: 1.5rem;
-        border-radius: 22px;
-        border: 2px dashed rgba(99,102,241,.35);
-        background:
-            linear-gradient(
-                180deg,
-                rgba(99,102,241,.055),
-                rgba(236,72,153,.035)
-            );
-        text-align: center;
-        margin-bottom: 1rem;
-    }
-
-    .upload-icon {
-        font-size: 2.4rem;
-        margin-bottom: .35rem;
-    }
-
-    .upload-title {
-        font-size: 1.15rem;
-        font-weight: 800;
-    }
-
-    .upload-text {
-        font-size: .88rem;
-        opacity: .65;
-        margin-top: .3rem;
-    }
-
-
-    /* ========================================================
-       METRICS
-       ======================================================== */
-
-    .metric-card {
-        padding: 1rem .8rem;
-        border-radius: 18px;
-        border: 1px solid rgba(128,128,128,.17);
-        background: rgba(128,128,128,.035);
-        text-align: center;
-        min-height: 112px;
-    }
-
-    .metric-icon {
-        font-size: 1.2rem;
-    }
-
-    .metric-value {
-        font-size: 1.55rem;
-        font-weight: 800;
-        margin-top: .15rem;
-    }
-
-    .metric-label {
-        font-size: .76rem;
-        opacity: .62;
-        margin-top: .05rem;
-    }
-
-
-    /* ========================================================
-       DOCUMENT READY
-       ======================================================== */
-
-    .document-ready {
-        padding: .85rem 1rem;
-        border-radius: 16px;
-        background: rgba(16,185,129,.075);
-        border: 1px solid rgba(16,185,129,.18);
-        margin-bottom: 1rem;
-    }
-
-    .document-name {
-        font-weight: 800;
-    }
-
-    .document-status {
-        font-size: .78rem;
-        opacity: .65;
-        margin-top: .2rem;
-    }
-
-
-    /* ========================================================
-       SUGGESTED QUESTIONS
-       ======================================================== */
-
-    .section-label {
-        font-size: .8rem;
-        font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: .07em;
-        opacity: .58;
-        margin: 1.2rem 0 .65rem 0;
-    }
-
-
-    /* ========================================================
-       PIPELINE
-       ======================================================== */
-
-    .pipeline {
-        display: flex;
-        flex-wrap: wrap;
-        gap: .45rem;
-        margin-top: .7rem;
+        min-height: 190px;
+        padding: 30px 20px;
     }
 
     .pipeline-step {
-        padding: .42rem .7rem;
-        border-radius: 999px;
-        font-size: .73rem;
-        font-weight: 700;
-        background: rgba(99,102,241,.09);
-        border: 1px solid rgba(99,102,241,.13);
+        font-size: .72rem;
+        padding: 8px 11px;
     }
 
-
-    /* ========================================================
-       ABOUT CARDS
-       ======================================================== */
-
-    .about-card {
-        padding: 1.25rem;
-        border-radius: 19px;
-        border: 1px solid rgba(128,128,128,.17);
-        background: rgba(128,128,128,.035);
-        height: 100%;
-    }
-
-    .about-icon {
-        font-size: 1.65rem;
-        margin-bottom: .45rem;
-    }
-
-    .about-title {
-        font-weight: 800;
-        font-size: 1rem;
-        margin-bottom: .35rem;
-    }
-
-    .about-text {
-        font-size: .86rem;
-        line-height: 1.55;
-        opacity: .68;
-    }
-
-
-    /* ========================================================
-       BUTTONS
-       ======================================================== */
-
-    .stButton > button {
-        border-radius: 12px;
-        font-weight: 700;
-        min-height: 2.7rem;
-    }
-
-
-    /* ========================================================
-       CHAT
-       ======================================================== */
-
-    div[data-testid="stChatMessage"] {
-        border-radius: 16px;
-    }
-
-
-    /* ========================================================
-       FOOTER
-       ======================================================== */
-
-    .footer {
-        text-align: center;
-        margin-top: 3rem;
-        padding-top: 1.2rem;
-        border-top: 1px solid rgba(128,128,128,.15);
-        font-size: .75rem;
-        opacity: .5;
-    }
+}
 
 </style>
 """,
@@ -429,7 +763,9 @@ DEFAULT_STATE = {
 }
 
 for key, value in DEFAULT_STATE.items():
+
     if key not in st.session_state:
+
         st.session_state[key] = value
 
 
@@ -449,18 +785,24 @@ JINA_DIMENSIONS = int(
     )
 )
 
-JINA_ENDPOINT = "https://api.jina.ai/v1/embeddings"
+JINA_ENDPOINT = (
+    "https://api.jina.ai/v1/embeddings"
+)
 
 JINA_BATCH_SIZE = 100
 
 
 GEMINI_MODELS = [
+
     os.getenv(
         "GEMINI_MODEL",
         "gemini-3.5-flash-lite"
     ),
+
     "gemini-3.1-flash-lite",
+
     "gemini-3.5-flash",
+
 ]
 
 
@@ -469,47 +811,103 @@ GEMINI_MODELS = [
 # ============================================================
 
 def get_jina_key():
+
     try:
-        return st.secrets["JINA_API_KEY"]
+
+        return st.secrets[
+            "JINA_API_KEY"
+        ]
+
     except Exception:
-        return os.getenv("JINA_API_KEY")
+
+        return os.getenv(
+            "JINA_API_KEY"
+        )
 
 
 def get_gemini_key():
+
     try:
-        return st.secrets["GEMINI_API_KEY"]
+
+        return st.secrets[
+            "GEMINI_API_KEY"
+        ]
+
     except Exception:
-        return os.getenv("GEMINI_API_KEY")
+
+        return os.getenv(
+            "GEMINI_API_KEY"
+        )
 
 
 # ============================================================
-# DOCLING / TEXT HELPERS
+# TEXT HELPERS
 # ============================================================
 
 def clean_text(text):
+
     if text is None:
+
         return ""
 
-    text = str(text).replace("\xa0", " ")
-    text = re.sub(r"[ \t]+", " ", text)
-    text = re.sub(r"\n{3,}", "\n\n", text)
+    text = str(text).replace(
+        "\xa0",
+        " "
+    )
+
+    text = re.sub(
+        r"[ \t]+",
+        " ",
+        text
+    )
+
+    text = re.sub(
+        r"\n{3,}",
+        "\n\n",
+        text
+    )
 
     return text.strip()
 
 
 def get_item_text(item):
 
-    text = getattr(item, "text", None)
+    text = getattr(
+        item,
+        "text",
+        None
+    )
 
-    if isinstance(text, str) and text.strip():
-        return clean_text(text)
+    if (
+        isinstance(text, str)
+        and text.strip()
+    ):
 
-    orig = getattr(item, "orig", None)
+        return clean_text(
+            text
+        )
 
-    if isinstance(orig, str) and orig.strip():
-        return clean_text(orig)
 
-    if isinstance(item, dict):
+    orig = getattr(
+        item,
+        "orig",
+        None
+    )
+
+    if (
+        isinstance(orig, str)
+        and orig.strip()
+    ):
+
+        return clean_text(
+            orig
+        )
+
+
+    if isinstance(
+        item,
+        dict
+    ):
 
         for key in (
             "text",
@@ -517,10 +915,18 @@ def get_item_text(item):
             "content"
         ):
 
-            value = item.get(key)
+            value = item.get(
+                key
+            )
 
-            if isinstance(value, str) and value.strip():
-                return clean_text(value)
+            if (
+                isinstance(value, str)
+                and value.strip()
+            ):
+
+                return clean_text(
+                    value
+                )
 
     return ""
 
@@ -529,7 +935,11 @@ def get_page_number(item):
 
     try:
 
-        prov = getattr(item, "prov", [])
+        prov = getattr(
+            item,
+            "prov",
+            []
+        )
 
         if prov:
 
@@ -539,18 +949,24 @@ def get_page_number(item):
                 None
             )
 
-            if page_no is None and isinstance(
-                prov[0],
-                dict
+            if (
+                page_no is None
+                and isinstance(
+                    prov[0],
+                    dict
+                )
             ):
 
-                page_no = prov[0].get(
+                page_no = prov[
+                    0
+                ].get(
                     "page_no"
                 )
 
             return page_no
 
     except Exception:
+
         pass
 
     return None
@@ -574,6 +990,7 @@ def table_to_text(table):
             ]
 
             if any(columns):
+
                 lines.append(
                     " | ".join(columns)
                 )
@@ -594,22 +1011,31 @@ def table_to_text(table):
                         )
                     )
 
-            result = "\n".join(lines).strip()
+            result = "\n".join(
+                lines
+            ).strip()
 
             if result:
+
                 return result
 
     except Exception:
+
         pass
 
-    return get_item_text(table)
+    return get_item_text(
+        table
+    )
 
 
 def split_sentences(text):
 
-    text = clean_text(text)
+    text = clean_text(
+        text
+    )
 
     if not text:
+
         return []
 
     paragraphs = re.split(
@@ -624,6 +1050,7 @@ def split_sentences(text):
         paragraph = paragraph.strip()
 
         if not paragraph:
+
             continue
 
         parts = re.split(
@@ -636,19 +1063,26 @@ def split_sentences(text):
             part = part.strip()
 
             if part:
-                sentences.append(part)
+
+                sentences.append(
+                    part
+                )
 
     return sentences
 
 
 # ============================================================
-# STAGE 1 — DOCLING
+# DOCLING
 # ============================================================
 
-@st.cache_resource(show_spinner=False)
+@st.cache_resource(
+    show_spinner=False
+)
 def get_converter():
 
-    pipeline_options = PdfPipelineOptions()
+    pipeline_options = (
+        PdfPipelineOptions()
+    )
 
     pipeline_options.do_table_structure = True
 
@@ -657,16 +1091,24 @@ def get_converter():
     pipeline_options.do_picture_description = False
 
     # IMPORTANT:
-    # Keep OCR disabled because the Streamlit deployment
-    # environment caused RapidOCR model permission issues.
+    # Keep OCR disabled for deployment.
     pipeline_options.do_ocr = False
 
     return DocumentConverter(
+
         format_options={
-            InputFormat.PDF: PdfFormatOption(
-                pipeline_options=pipeline_options
-            )
+
+            InputFormat.PDF:
+
+                PdfFormatOption(
+
+                    pipeline_options=
+                        pipeline_options
+
+                )
+
         }
+
     )
 
 
@@ -678,14 +1120,21 @@ def extract_pdf(
 
     with tempfile.TemporaryDirectory() as temp_dir:
 
-        pdf_path = Path(temp_dir) / file_name
+        pdf_path = (
+            Path(temp_dir)
+            / file_name
+        )
 
-        pdf_path.write_bytes(pdf_bytes)
+        pdf_path.write_bytes(
+            pdf_bytes
+        )
+
 
         progress.progress(
             0.12,
             "Reading PDF with Docling…"
         )
+
 
         result = get_converter().convert(
             str(pdf_path)
@@ -693,13 +1142,18 @@ def extract_pdf(
 
         doc = result.document
 
+
         elements = []
 
         text_count = 0
         table_count = 0
         visual_count = 0
 
-        # Preserve document order.
+
+        # ----------------------------------------------------
+        # DOCUMENT ELEMENTS
+        # ----------------------------------------------------
+
         for position, (
             item,
             level
@@ -707,16 +1161,16 @@ def extract_pdf(
             doc.iterate_items()
         ):
 
-            page = get_page_number(item)
+            page = get_page_number(
+                item
+            )
 
             item_name = type(
                 item
             ).__name__.lower()
 
-            # -----------------------------
-            # TABLE
-            # -----------------------------
 
+            # TABLE
             if "table" in item_name:
 
                 content = table_to_text(
@@ -727,15 +1181,20 @@ def extract_pdf(
 
                     elements.append({
 
-                        "type": "table",
+                        "type":
+                            "table",
 
-                        "page": page,
+                        "page":
+                            page,
 
-                        "position": position,
+                        "position":
+                            position,
 
-                        "content": content,
+                        "content":
+                            content,
 
-                        "label": "table",
+                        "label":
+                            "table",
 
                     })
 
@@ -743,22 +1202,22 @@ def extract_pdf(
 
                 continue
 
-            # -----------------------------
-            # PICTURE
-            # -----------------------------
 
+            # PICTURE
             if "picture" in item_name:
 
                 continue
 
-            # -----------------------------
-            # TEXT
-            # -----------------------------
 
-            content = get_item_text(item)
+            # TEXT
+            content = get_item_text(
+                item
+            )
 
             if not content:
+
                 continue
+
 
             label = getattr(
                 item,
@@ -766,30 +1225,39 @@ def extract_pdf(
                 "text"
             )
 
+
             elements.append({
 
-                "type": "text",
+                "type":
+                    "text",
 
-                "page": page,
+                "page":
+                    page,
 
-                "position": position,
+                "position":
+                    position,
 
-                "content": content,
+                "content":
+                    content,
 
-                "label": str(label),
+                "label":
+                    str(label),
 
             })
 
+
             text_count += 1
+
 
         progress.progress(
             0.35,
             "Extracting text and tables…"
         )
 
-        # ====================================================
-        # VISUAL UNDERSTANDING
-        # ====================================================
+
+        # ----------------------------------------------------
+        # VISUALS
+        # ----------------------------------------------------
 
         pictures = list(
             getattr(
@@ -800,6 +1268,7 @@ def extract_pdf(
         )
 
         visual_candidates = []
+
 
         for idx, picture in enumerate(
             pictures,
@@ -813,16 +1282,27 @@ def extract_pdf(
                 )
 
                 if image is None:
+
                     continue
 
-                width, height = image.size
 
-                if width < 200 or height < 80:
+                width, height = (
+                    image.size
+                )
+
+
+                if (
+                    width < 200
+                    or height < 80
+                ):
+
                     continue
+
 
                 page = get_page_number(
                     picture
                 )
+
 
                 visual_candidates.append(
                     (
@@ -832,18 +1312,23 @@ def extract_pdf(
                     )
                 )
 
+
             except Exception:
+
                 continue
+
 
         visual_total = len(
             visual_candidates
         )
+
 
         if visual_total:
 
             client = genai.Client(
                 api_key=get_gemini_key()
             )
+
 
             for n, (
                 idx,
@@ -854,20 +1339,25 @@ def extract_pdf(
                 start=1
             ):
 
-                description = describe_visual(
-                    client,
-                    image,
-                    page,
-                    GEMINI_MODELS
+                description = (
+                    describe_visual(
+                        client,
+                        image,
+                        page,
+                        GEMINI_MODELS
+                    )
                 )
+
 
                 if description:
 
                     elements.append({
 
-                        "type": "visual",
+                        "type":
+                            "visual",
 
-                        "page": page,
+                        "page":
+                            page,
 
                         "position":
                             10_000_000 + idx,
@@ -880,9 +1370,12 @@ def extract_pdf(
 
                     })
 
+
                     visual_count += 1
 
+
                 progress.progress(
+
                     0.35
                     + (
                         0.25
@@ -892,35 +1385,58 @@ def extract_pdf(
                             1
                         )
                     ),
+
                     f"Understanding visuals "
                     f"({n}/{visual_total})…"
+
                 )
 
+
+        # ----------------------------------------------------
+        # SORT
+        # ----------------------------------------------------
+
         elements.sort(
-            key=lambda x: x["position"]
+            key=lambda x:
+                x["position"]
         )
+
 
         progress.progress(
             0.62,
             "Building structure-aware chunks…"
         )
 
+
         chunks = make_chunks(
             elements
         )
+
 
         progress.progress(
             0.66,
             "Creating Jina embeddings…"
         )
 
+
         embeddings = embed_documents(
+
             [
-                format_document_for_embedding(c)
+                format_document_for_embedding(
+                    c
+                )
+
                 for c in chunks
             ],
+
             progress
+
         )
+
+
+        # ----------------------------------------------------
+        # FAISS
+        # ----------------------------------------------------
 
         index = faiss.IndexFlatIP(
             JINA_DIMENSIONS
@@ -930,6 +1446,7 @@ def extract_pdf(
             embeddings
         )
 
+
         metadata = [
 
             {
@@ -938,13 +1455,20 @@ def extract_pdf(
                     c["chunk_id"],
 
                 "page_start":
-                    c.get("page_start"),
+                    c.get(
+                        "page_start"
+                    ),
 
                 "page_end":
-                    c.get("page_end"),
+                    c.get(
+                        "page_end"
+                    ),
 
                 "section":
-                    c.get("section", ""),
+                    c.get(
+                        "section",
+                        ""
+                    ),
 
                 "element_types":
                     c.get(
@@ -970,18 +1494,23 @@ def extract_pdf(
 
         ]
 
+
         progress.progress(
             1.0,
             "Document is ready."
         )
 
+
         return {
 
-            "chunks": chunks,
+            "chunks":
+                chunks,
 
-            "metadata": metadata,
+            "metadata":
+                metadata,
 
-            "index": index,
+            "index":
+                index,
 
             "pages":
                 len(
@@ -1017,7 +1546,10 @@ def extract_pdf(
 
 def classify_gemini_error(exc):
 
-    text = str(exc).upper()
+    text = str(
+        exc
+    ).upper()
+
 
     if any(
         x in text
@@ -1028,7 +1560,9 @@ def classify_gemini_error(exc):
             "PERMISSION_DENIED"
         ]
     ):
+
         return "auth"
+
 
     if any(
         x in text
@@ -1039,7 +1573,9 @@ def classify_gemini_error(exc):
             "QUOTA"
         ]
     ):
+
         return "quota"
+
 
     if any(
         x in text
@@ -1052,7 +1588,9 @@ def classify_gemini_error(exc):
             "INTERNAL"
         ]
     ):
+
         return "temporary"
+
 
     return "permanent"
 
@@ -1090,6 +1628,7 @@ Preserve exact terminology, names and numerical values whenever readable.
 Return ONLY the description.
 """.strip()
 
+
     import io
 
     buf = io.BytesIO()
@@ -1099,7 +1638,10 @@ Return ONLY the description.
         format="PNG"
     )
 
-    image_bytes = buf.getvalue()
+    image_bytes = (
+        buf.getvalue()
+    )
+
 
     for model in models:
 
@@ -1107,57 +1649,71 @@ Return ONLY the description.
 
             try:
 
-                response = client.models.generate_content(
+                response = (
+                    client.models.generate_content(
 
-                    model=model,
+                        model=model,
 
-                    contents=[
+                        contents=[
 
-                        types.Part.from_bytes(
+                            types.Part.from_bytes(
 
-                            data=image_bytes,
+                                data=image_bytes,
 
-                            mime_type="image/png",
+                                mime_type="image/png",
 
-                        ),
+                            ),
 
-                        prompt,
+                            prompt,
 
-                    ],
+                        ],
 
+                    )
                 )
+
 
                 if response.text:
 
-                    return response.text.strip()
+                    return (
+                        response.text.strip()
+                    )
+
 
             except Exception as exc:
 
-                error_type = classify_gemini_error(
-                    exc
+                error_type = (
+                    classify_gemini_error(
+                        exc
+                    )
                 )
+
 
                 if error_type in {
                     "auth",
                     "permanent"
                 }:
+
                     break
+
 
                 if attempt < 2:
 
                     time.sleep(
+
                         min(
                             2 ** attempt
                             + random.random(),
                             8
                         )
+
                     )
+
 
     return ""
 
 
 # ============================================================
-# STAGE 2 — STRUCTURE-AWARE CHUNKING
+# STRUCTURE-AWARE CHUNKING
 # ============================================================
 
 def make_chunks(
@@ -1175,11 +1731,13 @@ def make_chunks(
 
     current_section = ""
 
+
     def current_text():
 
         return "\n\n".join(
             current_parts
         ).strip()
+
 
     def flush():
 
@@ -1188,7 +1746,9 @@ def make_chunks(
         nonlocal current_types
         nonlocal current_pages
 
+
         text = current_text()
+
 
         if not text:
 
@@ -1198,6 +1758,7 @@ def make_chunks(
             current_pages = []
 
             return
+
 
         chunks.append({
 
@@ -1236,10 +1797,12 @@ def make_chunks(
 
         })
 
+
         current_parts = []
         current_ids = []
         current_types = []
         current_pages = []
+
 
     def add(
         content,
@@ -1250,43 +1813,56 @@ def make_chunks(
             content
         )
 
+
         if not content:
+
             return
+
 
         current_parts.append(
             content
         )
 
+
         current_ids.append(
+
             f"element_"
             f"{element.get('position', len(current_ids)):06d}"
+
         )
+
 
         current_types.append(
             element["type"]
         )
 
-        if element.get("page") is not None:
+
+        if element.get(
+            "page"
+        ) is not None:
 
             current_pages.append(
                 element["page"]
             )
 
+
     for element in elements:
 
-        kind = element["type"]
+        kind = element[
+            "type"
+        ]
 
         label = element.get(
             "label",
             ""
         )
 
-        content = element["content"]
+        content = element[
+            "content"
+        ]
 
-        # -----------------------------
+
         # SECTION HEADER
-        # -----------------------------
-
         if (
             kind == "text"
             and label == "section_header"
@@ -1303,11 +1879,8 @@ def make_chunks(
 
             continue
 
-        # -----------------------------
-        # TABLE / VISUAL
-        # Keep intact
-        # -----------------------------
 
+        # TABLE / VISUAL
         if kind in {
             "table",
             "visual"
@@ -1316,14 +1889,20 @@ def make_chunks(
             if current_text():
 
                 candidate = (
+
                     current_text()
                     + "\n\n"
                     + content
+
                 )
 
-                if len(candidate) > target_chars:
+                if (
+                    len(candidate)
+                    > target_chars
+                ):
 
                     flush()
+
 
             add(
                 content,
@@ -1332,10 +1911,8 @@ def make_chunks(
 
             continue
 
-        # -----------------------------
-        # TEXT
-        # -----------------------------
 
+        # NORMAL TEXT
         for sentence in split_sentences(
             content
         ):
@@ -1352,7 +1929,11 @@ def make_chunks(
 
             )
 
-            if len(candidate) <= target_chars:
+
+            if (
+                len(candidate)
+                <= target_chars
+            ):
 
                 add(
                     sentence,
@@ -1361,14 +1942,20 @@ def make_chunks(
 
                 continue
 
+
             flush()
 
-            if len(sentence) <= max_chars:
+
+            if (
+                len(sentence)
+                <= max_chars
+            ):
 
                 add(
                     sentence,
                     element
                 )
+
 
             else:
 
@@ -1376,30 +1963,40 @@ def make_chunks(
 
                 buffer = []
 
+
                 for word in words:
 
                     test = " ".join(
                         buffer + [word]
                     )
 
-                    if len(test) <= max_chars:
+
+                    if (
+                        len(test)
+                        <= max_chars
+                    ):
 
                         buffer.append(
                             word
                         )
+
 
                     else:
 
                         if buffer:
 
                             add(
-                                " ".join(buffer),
+                                " ".join(
+                                    buffer
+                                ),
                                 element
                             )
 
                             flush()
 
+
                         buffer = [word]
+
 
                 if buffer:
 
@@ -1408,13 +2005,14 @@ def make_chunks(
                         element
                     )
 
+
     flush()
 
     return chunks
 
 
 # ============================================================
-# STAGE 3 — JINA EMBEDDING
+# JINA EMBEDDINGS
 # ============================================================
 
 def jina_request(
@@ -1424,12 +2022,14 @@ def jina_request(
 
     key = get_jina_key()
 
+
     if not key:
 
         raise RuntimeError(
             "JINA_API_KEY is missing. "
             "Add it to Streamlit Secrets."
         )
+
 
     headers = {
 
@@ -1443,6 +2043,7 @@ def jina_request(
             "application/json",
 
     }
+
 
     payload = {
 
@@ -1466,7 +2067,9 @@ def jina_request(
 
     }
 
+
     last_error = None
+
 
     for attempt in range(6):
 
@@ -1484,6 +2087,7 @@ def jina_request(
 
             )
 
+
             if response.status_code != 200:
 
                 raise RuntimeError(
@@ -1494,15 +2098,22 @@ def jina_request(
 
                 )
 
-            data = response.json().get(
-                "data",
-                []
+
+            data = (
+                response.json()
+                .get(
+                    "data",
+                    []
+                )
             )
+
 
             data = sorted(
                 data,
-                key=lambda x: x["index"]
+                key=lambda x:
+                    x["index"]
             )
+
 
             vectors = np.asarray(
 
@@ -1515,13 +2126,18 @@ def jina_request(
 
             )
 
-            if len(vectors) != len(inputs):
+
+            if (
+                len(vectors)
+                != len(inputs)
+            ):
 
                 raise RuntimeError(
                     "Jina returned an "
                     "unexpected number "
                     "of embeddings."
                 )
+
 
             vectors /= np.maximum(
 
@@ -1535,14 +2151,19 @@ def jina_request(
 
             )
 
+
             return vectors
+
 
         except Exception as exc:
 
             last_error = exc
 
+
             if attempt == 5:
+
                 break
+
 
             time.sleep(
 
@@ -1553,6 +2174,7 @@ def jina_request(
                 )
 
             )
+
 
     raise last_error
 
@@ -1566,6 +2188,7 @@ def embed_documents(
 
     total = len(texts)
 
+
     for start in range(
         0,
         total,
@@ -1577,19 +2200,23 @@ def embed_documents(
             start + JINA_BATCH_SIZE
         ]
 
+
         vectors = jina_request(
             batch,
             "retrieval.passage"
         )
 
+
         all_vectors.append(
             vectors
         )
+
 
         done = min(
             start + len(batch),
             total
         )
+
 
         progress.progress(
 
@@ -1605,9 +2232,12 @@ def embed_documents(
 
         )
 
+
     return np.vstack(
         all_vectors
-    ).astype("float32")
+    ).astype(
+        "float32"
+    )
 
 
 def embed_query(question):
@@ -1634,7 +2264,7 @@ def format_document_for_embedding(
 
 
 # ============================================================
-# STAGE 4 — RETRIEVAL
+# RETRIEVAL
 # ============================================================
 
 def retrieve(
@@ -1646,6 +2276,7 @@ def retrieve(
         question
     )
 
+
     scores, indices = (
         st.session_state.index.search(
             q,
@@ -1653,21 +2284,28 @@ def retrieve(
         )
     )
 
+
     results = []
+
 
     for rank, (
         score,
         idx
     ) in enumerate(
+
         zip(
             scores[0],
             indices[0]
         ),
+
         start=1
+
     ):
 
         if idx < 0:
+
             continue
+
 
         results.append({
 
@@ -1689,6 +2327,7 @@ def retrieve(
 
         })
 
+
     return results
 
 
@@ -1698,31 +2337,40 @@ def build_context(
 
     parts = []
 
+
     for item in results:
 
-        chunk = item["chunk"]
+        chunk = item[
+            "chunk"
+        ]
+
 
         page = chunk.get(
             "page_start"
         )
 
+
         page_end = chunk.get(
             "page_end"
         )
 
-        page_text = (
 
-            f"page {page}"
+        if (
+            page == page_end
+            or page_end is None
+        ):
 
-            if (
-                page == page_end
-                or page_end is None
+            page_text = (
+                f"page {page}"
             )
 
-            else
-            f"pages {page}-{page_end}"
+        else:
 
-        )
+            page_text = (
+                f"pages "
+                f"{page}-{page_end}"
+            )
+
 
         parts.append(
 
@@ -1731,6 +2379,7 @@ def build_context(
             f"{chunk['content']}"
 
         )
+
 
     return "\n\n".join(
         parts
@@ -1748,6 +2397,7 @@ def generate_answer(
 
     key = get_gemini_key()
 
+
     if not key:
 
         raise RuntimeError(
@@ -1755,13 +2405,16 @@ def generate_answer(
             "Add it to Streamlit Secrets."
         )
 
+
     client = genai.Client(
         api_key=key
     )
 
+
     context = build_context(
         results
     )
+
 
     prompt = f"""
 You are a document question-answering assistant.
@@ -1799,19 +2452,24 @@ FINAL ANSWER
 ============
 """.strip()
 
+
     last_error = None
+
 
     for model in GEMINI_MODELS:
 
         try:
 
-            response = client.models.generate_content(
+            response = (
+                client.models.generate_content(
 
-                model=model,
+                    model=model,
 
-                contents=prompt,
+                    contents=prompt,
 
+                )
             )
+
 
             if response.text:
 
@@ -1820,15 +2478,19 @@ FINAL ANSWER
                     model
                 )
 
+
         except Exception as exc:
 
             last_error = exc
 
             time.sleep(1)
 
+
     raise RuntimeError(
+
         f"Gemini could not generate "
         f"an answer: {last_error}"
+
     )
 
 
@@ -1846,7 +2508,7 @@ def clear_document():
 
 
 # ============================================================
-# BRAND HEADER
+# BRAND
 # ============================================================
 
 st.markdown(
@@ -1901,6 +2563,10 @@ ask_tab, about_tab = st.tabs(
 
 with ask_tab:
 
+    # --------------------------------------------------------
+    # HERO
+    # --------------------------------------------------------
+
     st.markdown(
         """
 <div class="hero">
@@ -1932,6 +2598,10 @@ with ask_tab:
 
     if not st.session_state.ready:
 
+        # ----------------------------------------------------
+        # UPLOAD INTRO
+        # ----------------------------------------------------
+
         st.markdown(
             """
 <div class="upload-card">
@@ -1945,8 +2615,8 @@ with ask_tab:
     </div>
 
     <div class="upload-text">
-        Upload a PDF to create your temporary document
-        knowledge base.
+        Upload a PDF to create your temporary
+        document knowledge base.
     </div>
 
 </div>
@@ -1954,6 +2624,10 @@ with ask_tab:
             unsafe_allow_html=True,
         )
 
+
+        # ----------------------------------------------------
+        # ACTUAL UPLOADER
+        # ----------------------------------------------------
 
         uploaded = st.file_uploader(
 
@@ -1972,9 +2646,26 @@ with ask_tab:
         )
 
 
+        st.markdown(
+            """
+<div class="file-limit">
+    📦 Maximum file size: <b>500 MB</b>
+    &nbsp;•&nbsp;
+    📄 PDF only
+</div>
+""",
+            unsafe_allow_html=True,
+        )
+
+
+        # ----------------------------------------------------
+        # FILE SELECTED
+        # ----------------------------------------------------
+
         if uploaded:
 
             st.markdown(
+
                 f"""
 <div class="document-ready">
 
@@ -1990,7 +2681,9 @@ with ask_tab:
 
 </div>
 """,
+
                 unsafe_allow_html=True,
+
             )
 
 
@@ -2004,11 +2697,17 @@ with ask_tab:
 
             ):
 
-                jina_key = get_jina_key()
+                jina_key = (
+                    get_jina_key()
+                )
 
-                gemini_key = get_gemini_key()
+                gemini_key = (
+                    get_gemini_key()
+                )
+
 
                 missing = []
+
 
                 if not jina_key:
 
@@ -2016,11 +2715,13 @@ with ask_tab:
                         "JINA_API_KEY"
                     )
 
+
                 if not gemini_key:
 
                     missing.append(
                         "GEMINI_API_KEY"
                     )
+
 
                 if missing:
 
@@ -2033,12 +2734,14 @@ with ask_tab:
 
                     )
 
+
                 else:
 
                     progress = st.progress(
                         0,
                         "Starting…"
                     )
+
 
                     try:
 
@@ -2051,6 +2754,7 @@ with ask_tab:
                             progress,
 
                         )
+
 
                         st.session_state.ready = True
 
@@ -2080,9 +2784,13 @@ with ask_tab:
 
                         st.session_state.messages = []
 
+                        st.session_state.pending_question = None
+
+
                         progress.empty()
 
                         st.rerun()
+
 
                     except Exception as exc:
 
@@ -2093,15 +2801,17 @@ with ask_tab:
                         )
 
 
-        else:
+        # ----------------------------------------------------
+        # CAPABILITIES
+        # ----------------------------------------------------
 
-            st.markdown(
-                """
-<div class="card">
+        st.markdown(
+            """
+<div class="capability-card">
 
-    <b>🧠 What DocuMind can understand</b>
-
-    <br><br>
+    <div class="capability-title">
+        🧠 What DocuMind can understand
+    </div>
 
     <div class="pipeline">
 
@@ -2133,8 +2843,8 @@ with ask_tab:
 
 </div>
 """,
-                unsafe_allow_html=True,
-            )
+            unsafe_allow_html=True,
+        )
 
 
     # ========================================================
@@ -2143,7 +2853,9 @@ with ask_tab:
 
     else:
 
-        stats = st.session_state.stats
+        stats = (
+            st.session_state.stats
+        )
 
 
         # ----------------------------------------------------
@@ -2154,9 +2866,11 @@ with ask_tab:
             [5, 1]
         )
 
+
         with col_a:
 
             st.markdown(
+
                 f"""
 <div class="document-ready">
 
@@ -2170,8 +2884,11 @@ with ask_tab:
 
 </div>
 """,
+
                 unsafe_allow_html=True,
+
             )
+
 
         with col_b:
 
@@ -2188,6 +2905,7 @@ with ask_tab:
         # ----------------------------------------------------
 
         c1, c2, c3, c4 = st.columns(4)
+
 
         metrics = [
 
@@ -2231,22 +2949,8 @@ with ask_tab:
         ]
 
 
-        for col, (
-            icon,
-            value,
-            label
-        ) in [
-
-            (
-                item[0],
-                item[1],
-                item[2],
-                item[3]
-            )
-
-            for item in metrics
-
-        ]:
+        # FIXED METRICS LOOP
+        for col, icon, value, label in metrics:
 
             with col:
 
@@ -2281,8 +2985,9 @@ with ask_tab:
 
         st.markdown("")
 
+
         st.markdown(
-            f"""
+            """
 <div class="gradient-card">
 
     <h3>
@@ -2301,14 +3006,17 @@ with ask_tab:
 
 
         # ----------------------------------------------------
-        # SUGGESTED QUESTIONS
+        # QUICK QUESTIONS
         # ----------------------------------------------------
 
         st.markdown(
+
             '<div class="section-label">'
             'Quick questions'
             '</div>',
+
             unsafe_allow_html=True,
+
         )
 
 
@@ -2349,8 +3057,11 @@ with ask_tab:
             with col:
 
                 if st.button(
+
                     label,
-                    use_container_width=True
+
+                    use_container_width=True,
+
                 ):
 
                     st.session_state.pending_question = (
@@ -2364,7 +3075,9 @@ with ask_tab:
         # CHAT HISTORY
         # ----------------------------------------------------
 
-        for message in st.session_state.messages:
+        for message in (
+            st.session_state.messages
+        ):
 
             with st.chat_message(
                 message["role"]
@@ -2373,6 +3086,7 @@ with ask_tab:
                 st.markdown(
                     message["content"]
                 )
+
 
                 if message.get(
                     "sources"
@@ -2396,7 +3110,7 @@ with ask_tab:
 
 
         # ----------------------------------------------------
-        # QUESTION INPUT
+        # CHAT INPUT
         # ----------------------------------------------------
 
         question = st.chat_input(
@@ -2404,7 +3118,10 @@ with ask_tab:
         )
 
 
-        # Suggested question gets priority
+        # ----------------------------------------------------
+        # QUICK QUESTION HANDLER
+        # ----------------------------------------------------
+
         if (
             not question
             and st.session_state.pending_question
@@ -2458,6 +3175,7 @@ with ask_tab:
                             top_k=5
                         )
 
+
                         answer, model = (
                             generate_answer(
                                 question,
@@ -2475,28 +3193,31 @@ with ask_tab:
                                 "chunk"
                             ]
 
+
                             page = chunk.get(
                                 "page_start"
                             )
+
 
                             page_end = chunk.get(
                                 "page_end"
                             )
 
 
-                            page_label = (
+                            if (
+                                page == page_end
+                                or page_end is None
+                            ):
 
-                                str(page)
-
-                                if (
-                                    page == page_end
-                                    or page_end is None
+                                page_label = (
+                                    str(page)
                                 )
 
-                                else
-                                f"{page}-{page_end}"
+                            else:
 
-                            )
+                                page_label = (
+                                    f"{page}-{page_end}"
+                                )
 
 
                             sources.append({
@@ -2555,6 +3276,7 @@ with ask_tab:
 
                         )
 
+
                         st.error(
                             error_text
                         )
@@ -2576,6 +3298,10 @@ with ask_tab:
 # ============================================================
 
 with about_tab:
+
+    # --------------------------------------------------------
+    # ABOUT HERO
+    # --------------------------------------------------------
 
     st.markdown(
         """
@@ -2601,13 +3327,14 @@ with about_tab:
     )
 
 
-    # ========================================================
+    # --------------------------------------------------------
     # WHAT IS DOCUMIND
-    # ========================================================
+    # --------------------------------------------------------
 
     st.markdown(
         "## 🧠 What is DocuMind?"
     )
+
 
     st.write(
         "DocuMind is a Retrieval-Augmented Generation "
@@ -2617,13 +3344,14 @@ with about_tab:
     )
 
 
-    # ========================================================
+    # --------------------------------------------------------
     # FEATURES
-    # ========================================================
+    # --------------------------------------------------------
 
     st.markdown(
         "## ✨ What it can handle"
     )
+
 
     a1, a2, a3 = st.columns(3)
 
@@ -2706,9 +3434,9 @@ with about_tab:
         )
 
 
-    # ========================================================
+    # --------------------------------------------------------
     # HOW IT WORKS
-    # ========================================================
+    # --------------------------------------------------------
 
     st.markdown(
         "## ⚙️ How DocuMind works"
@@ -2794,17 +3522,18 @@ with about_tab:
         )
 
 
-    # ========================================================
-    # PIPELINE
-    # ========================================================
+    # --------------------------------------------------------
+    # RAG PIPELINE
+    # --------------------------------------------------------
 
     st.markdown(
         "## 🔗 RAG Pipeline"
     )
 
+
     st.markdown(
         """
-<div class="card">
+<div class="capability-card">
 
     <div class="pipeline">
 
@@ -2856,9 +3585,9 @@ with about_tab:
     )
 
 
-    # ========================================================
+    # --------------------------------------------------------
     # HOW TO USE
-    # ========================================================
+    # --------------------------------------------------------
 
     st.markdown(
         "## 🚀 How to use"
@@ -2870,23 +3599,25 @@ with about_tab:
 <div class="card">
 
 <b>Step 1 — Upload</b><br>
-Upload your PDF in the <b>Ask your PDF</b> tab.
+Open the <b>Ask your PDF</b> tab and upload your PDF.
 
 <br><br>
 
 <b>Step 2 — Process</b><br>
-Click <b>Process PDF</b> and wait while the document is processed.
+Click <b>Process PDF</b> and wait while DocuMind
+processes the document.
 
 <br><br>
 
 <b>Step 3 — Ask</b><br>
-Enter your question in the chat box.
+Type your question in the chat box or use one of
+the quick-question buttons.
 
 <br><br>
 
 <b>Step 4 — Verify</b><br>
-Use <b>View supporting pages</b> below the answer
-to see the pages used for the response.
+Use <b>View supporting pages</b> below an answer
+to see the document pages used for the response.
 
 </div>
 """,
@@ -2894,13 +3625,14 @@ to see the pages used for the response.
     )
 
 
-    # ========================================================
-    # QUESTION GUIDANCE
-    # ========================================================
+    # --------------------------------------------------------
+    # QUESTION TIPS
+    # --------------------------------------------------------
 
     st.markdown(
         "## 💡 Question tips"
     )
+
 
     st.info(
         "For precise answers, use terminology from the PDF. "
@@ -2956,13 +3688,14 @@ to see the pages used for the response.
         )
 
 
-    # ========================================================
+    # --------------------------------------------------------
     # SUPPORT
-    # ========================================================
+    # --------------------------------------------------------
 
     st.markdown(
         "## 📩 Support & Contact"
     )
+
 
     st.markdown(
         """
@@ -2994,9 +3727,9 @@ to see the pages used for the response.
     )
 
 
-    # ========================================================
-    # PRIVACY NOTE
-    # ========================================================
+    # --------------------------------------------------------
+    # PRIVACY
+    # --------------------------------------------------------
 
     st.warning(
         "Uploaded documents are processed for the active "
@@ -3013,8 +3746,14 @@ to see the pages used for the response.
 st.markdown(
     """
 <div class="footer">
+
     DocuMind · Intelligent PDF Assistant
-    · Docling · Jina Embeddings · FAISS · Gemini
+
+    · Docling
+    · Jina Embeddings
+    · FAISS
+    · Gemini
+
 </div>
 """,
     unsafe_allow_html=True,
