@@ -2,7 +2,6 @@ import os
 import re
 import tempfile
 from pathlib import Path
-from io import BytesIO
 
 import faiss
 import numpy as np
@@ -13,98 +12,76 @@ import streamlit as st
 from google import genai
 from google.genai import types
 
-from docling.document_converter import DocumentConverter, PdfFormatOption
-from docling.datamodel.base_models import InputFormat
-from docling.datamodel.pipeline_options import PdfPipelineOptions
+from docling.document_converter import (
+    DocumentConverter,
+    PdfFormatOption,
+)
+from docling.datamodel.pipeline_options import (
+    PdfPipelineOptions,
+)
+from docling.datamodel.base_models import (
+    InputFormat,
+)
 
 
 # ============================================================
 # CONFIGURATION
 # ============================================================
 
-JINA_MODEL = os.getenv(
-    "JINA_EMBEDDING_MODEL",
-    "jina-embeddings-v4"
+JINA_EMBEDDING_URL = (
+    "https://api.jina.ai/v1/embeddings"
 )
 
-JINA_DIMENSIONS = int(
-    os.getenv(
-        "JINA_EMBEDDING_DIMENSIONS",
-        "2048"
-    )
-)
+JINA_MODEL = "jina-embeddings-v4"
 
-JINA_ENDPOINT = "https://api.jina.ai/v1/embeddings"
+GEMINI_TEXT_MODEL = "gemini-2.5-flash"
 
-JINA_BATCH_SIZE = 100
+GEMINI_VISION_MODEL = "gemini-2.5-flash"
 
-GEMINI_MODELS = [
-    os.getenv(
-        "GEMINI_MODEL",
-        "gemini-3.5-flash-lite"
-    ),
-    "gemini-3.1-flash-lite",
-    "gemini-3.5-flash",
-]
+TOP_K = 5
+
+CHUNK_SIZE = 900
+
+CHUNK_OVERLAP = 150
 
 
 # ============================================================
 # API KEYS
 # ============================================================
 
-def get_secret(name):
-    """
-    Get a secret from Streamlit Secrets first,
-    then fall back to environment variables.
-    """
+def get_secret(name: str):
+
+    value = None
 
     try:
         value = st.secrets.get(name)
-
-        if value:
-            return value
-
     except Exception:
         pass
 
-    return os.getenv(name)
+    if not value:
+        value = os.getenv(name)
 
-
-def get_jina_key():
-
-    key = get_secret("JINA_API_KEY")
-
-    if not key:
+    if not value:
         raise RuntimeError(
-            "JINA_API_KEY is not configured. "
-            "Add it to Streamlit Secrets."
+            f"{name} is not configured."
         )
 
-    return key
-
-
-def get_gemini_key():
-
-    key = get_secret("GEMINI_API_KEY")
-
-    if not key:
-        raise RuntimeError(
-            "GEMINI_API_KEY is not configured. "
-            "Add it to Streamlit Secrets."
-        )
-
-    return key
+    return value
 
 
 # ============================================================
 # GEMINI CLIENT
 # ============================================================
 
-@st.cache_resource(show_spinner=False)
+@st.cache_resource
 def get_gemini_client():
 
+    api_key = get_secret(
+        "GEMINI_API_KEY"
+    )
+
     return genai.Client(
-        api_key=get_gemini_key()
+        api_key=api_key
     )
 
 
@@ -112,23 +89,19 @@ def get_gemini_client():
 # DOCLING CONVERTER
 # ============================================================
 
-@st.cache_resource(show_spinner=False)
-def get_converter():
+@st.cache_resource
+def get_document_converter():
 
     pipeline_options = PdfPipelineOptions()
 
-    # Table extraction
-    pipeline_options.do_table_structure = True
-
-    # Generate picture images
-    pipeline_options.generate_picture_images = True
-
-    # We handle visual descriptions ourselves
-    pipeline_options.do_picture_description = False
-
+    # --------------------------------------------------------
     # IMPORTANT:
-    # Prevent RapidOCR model permission/download issue
-    # seen on Streamlit deployment.
+    # Disable OCR.
+    #
+    # This prevents RapidOCR model permission/loading issues
+    # on Streamlit Cloud.
+    # --------------------------------------------------------
+
     pipeline_options.do_ocr = False
 
     converter = DocumentConverter(
@@ -143,7 +116,7 @@ def get_converter():
 
 
 # ============================================================
-# TEXT HELPERS
+# TEXT CLEANING
 # ============================================================
 
 def clean_text(text):
@@ -162,82 +135,12 @@ def clean_text(text):
     return text.strip()
 
 
-def get_item_text(item):
-
-    # Try text property
-    try:
-
-        value = getattr(
-            item,
-            "text",
-            None
-        )
-
-        if value:
-
-            return clean_text(value)
-
-    except Exception:
-        pass
-
-    # Try export_to_text()
-    try:
-
-        method = getattr(
-            item,
-            "export_to_text",
-            None
-        )
-
-        if callable(method):
-
-            value = method()
-
-            if value:
-
-                return clean_text(value)
-
-    except Exception:
-        pass
-
-    return ""
-
+# ============================================================
+# PAGE NUMBER
+# ============================================================
 
 def get_page_number(item):
 
-    # Direct page_no
-    try:
-
-        page_no = getattr(
-            item,
-            "page_no",
-            None
-        )
-
-        if page_no is not None:
-
-            return int(page_no)
-
-    except Exception:
-        pass
-
-    # Direct page
-    try:
-
-        page = getattr(
-            item,
-            "page",
-            None
-        )
-
-        if page is not None:
-
-            return int(page)
-
-    except Exception:
-        pass
-
-    # Provenance
     try:
 
         prov = getattr(
@@ -248,16 +151,15 @@ def get_page_number(item):
 
         if prov:
 
-            first_prov = prov[0]
+            first = prov[0]
 
             page_no = getattr(
-                first_prov,
+                first,
                 "page_no",
                 None
             )
 
             if page_no is not None:
-
                 return int(page_no)
 
     except Exception:
@@ -267,45 +169,82 @@ def get_page_number(item):
 
 
 # ============================================================
-# TABLE EXTRACTION
+# GENERIC ITEM TEXT
 # ============================================================
 
-def table_to_text(table, doc):
-
-    """
-    Convert Docling TableItem to searchable text.
-
-    IMPORTANT:
-    Current Docling versions require doc=doc.
-    """
-
-    # --------------------------------------------------------
-    # Preferred method: DataFrame
-    # --------------------------------------------------------
+def get_item_text(item):
 
     try:
 
-        df = table.export_to_dataframe(
-            doc=doc
+        text = getattr(
+            item,
+            "text",
+            None
         )
 
-        if df is not None:
-
-            if isinstance(df, pd.DataFrame):
-
-                if not df.empty:
-
-                    return clean_text(
-                        df.to_markdown(
-                            index=False
-                        )
-                    )
+        if text:
+            return clean_text(text)
 
     except Exception:
         pass
 
+    try:
+
+        text = getattr(
+            item,
+            "content",
+            None
+        )
+
+        if text:
+            return clean_text(text)
+
+    except Exception:
+        pass
+
+    return ""
+
+
+# ============================================================
+# TABLE TO TEXT
+# ============================================================
+
+def table_to_text(
+    table,
+    doc
+):
+
     # --------------------------------------------------------
-    # Fallback: Markdown
+    # Preferred:
+    # Export dataframe WITH doc argument.
+    # --------------------------------------------------------
+
+    try:
+
+        dataframe = table.export_to_dataframe(
+            doc=doc
+        )
+
+        if isinstance(
+            dataframe,
+            pd.DataFrame
+        ):
+
+            if not dataframe.empty:
+
+                return clean_text(
+                    dataframe.to_markdown(
+                        index=False
+                    )
+                )
+
+    except Exception:
+        pass
+
+
+    # --------------------------------------------------------
+    # Fallback:
+    # export markdown WITH doc argument.
     # --------------------------------------------------------
 
     try:
@@ -315,49 +254,57 @@ def table_to_text(table, doc):
         )
 
         if markdown:
-
-            return clean_text(markdown)
+            return clean_text(
+                markdown
+            )
 
     except Exception:
         pass
 
-    # --------------------------------------------------------
-    # Final fallback
-    # --------------------------------------------------------
 
-    try:
-
-        return clean_text(
-            str(table)
-        )
-
-    except Exception:
-
-        return ""
+    return ""
 
 
 # ============================================================
-# SENTENCE CHUNKING
+# SENTENCE SPLITTING
 # ============================================================
 
-def split_sentences(
+def split_sentences(text):
+
+    text = clean_text(text)
+
+    if not text:
+        return []
+
+    sentences = re.split(
+        r"(?<=[.!?])\s+",
+        text
+    )
+
+    return [
+        s.strip()
+        for s in sentences
+        if s.strip()
+    ]
+
+
+# ============================================================
+# CHUNK CREATION
+# ============================================================
+
+def make_chunks(
     text,
-    target_chars=1800,
-    max_chars=3200
+    page=None,
+    chunk_size=CHUNK_SIZE,
+    overlap=CHUNK_OVERLAP,
 ):
 
     text = clean_text(text)
 
     if not text:
-
         return []
 
-    if len(text) <= max_chars:
-
-        return [text]
-
-    sentences = re.split(
-        r"(?<=[.!?])\s+",
+    sentences = split_sentences(
         text
     )
 
@@ -367,711 +314,192 @@ def split_sentences(
 
     for sentence in sentences:
 
-        sentence = sentence.strip()
+        candidate = (
+            current + " " + sentence
+        ).strip()
 
-        if not sentence:
+        if len(candidate) <= chunk_size:
 
-            continue
-
-        proposed = (
-            f"{current} {sentence}"
-            .strip()
-        )
-
-        if (
-            current
-            and len(proposed) > target_chars
-        ):
-
-            chunks.append(
-                current.strip()
-            )
-
-            current = sentence
+            current = candidate
 
         else:
 
-            current = proposed
+            if current:
 
-        # Handle very long individual sentences
-        while len(current) > max_chars:
+                chunks.append(
+                    {
+                        "text": current,
+                        "page": page,
+                    }
+                )
 
-            chunks.append(
-                current[:max_chars].strip()
-            )
+            if overlap > 0:
 
-            current = current[max_chars:].strip()
+                overlap_text = (
+                    current[-overlap:]
+                    if current
+                    else ""
+                )
+
+                current = (
+                    overlap_text
+                    + " "
+                    + sentence
+                ).strip()
+
+            else:
+
+                current = sentence
+
 
     if current:
 
         chunks.append(
-            current.strip()
+            {
+                "text": current,
+                "page": page,
+            }
         )
+
 
     return chunks
-
-
-# ============================================================
-# STRUCTURE-AWARE CHUNKING
-# ============================================================
-
-def make_chunks(
-    elements,
-    target_chars=1800,
-    max_chars=3200
-):
-
-    chunks = []
-
-    for element in elements:
-
-        element_type = element.get(
-            "type",
-            "text"
-        )
-
-        page = element.get(
-            "page"
-        )
-
-        content = clean_text(
-            element.get(
-                "content",
-                ""
-            )
-        )
-
-        if not content:
-
-            continue
-
-        # ----------------------------------------------------
-        # Tables and visuals stay intact
-        # ----------------------------------------------------
-
-        if element_type in (
-            "table",
-            "visual"
-        ):
-
-            chunks.append(
-                {
-                    "text": content,
-                    "type": element_type,
-                    "page": page,
-                }
-            )
-
-            continue
-
-        # ----------------------------------------------------
-        # Normal text
-        # ----------------------------------------------------
-
-        parts = split_sentences(
-            content,
-            target_chars=target_chars,
-            max_chars=max_chars
-        )
-
-        for part in parts:
-
-            chunks.append(
-                {
-                    "text": part,
-                    "type": "text",
-                    "page": page,
-                }
-            )
-
-    return chunks
-
-
-# ============================================================
-# GEMINI ERROR HANDLING
-# ============================================================
-
-def classify_gemini_error(exc):
-
-    message = str(exc).lower()
-
-    if (
-        "quota" in message
-        or "429" in message
-    ):
-
-        return (
-            "Gemini quota or rate limit was reached."
-        )
-
-    if (
-        "503" in message
-        or "unavailable" in message
-    ):
-
-        return (
-            "The Gemini model is temporarily unavailable."
-        )
-
-    if (
-        "404" in message
-        or "not found" in message
-    ):
-
-        return (
-            "The configured Gemini model "
-            "is unavailable."
-        )
-
-    return str(exc)
 
 
 # ============================================================
 # VISUAL DESCRIPTION
 # ============================================================
 
-def describe_visual(image_bytes):
+def describe_visual(
+    picture,
+    doc,
+):
 
-    client = get_gemini_client()
+    try:
 
-    prompt = """
-You are analyzing a visual extracted from a PDF.
+        image = picture.get_image(
+            doc
+        )
 
-Describe ONLY information that is actually visible.
+        if image is None:
+            return ""
 
-Include when available:
 
-- title
-- caption
-- chart type
-- labels
-- axis information
-- important values
-- trends
-- comparisons
-- relationships
-- categories
-- other useful visual information
-
-Do not invent values or facts.
-
-Return a concise factual description suitable for
-semantic document retrieval.
-"""
-
-    last_error = None
-
-    for model in GEMINI_MODELS:
+        # Convert image to PNG bytes
+        image_buffer = tempfile.NamedTemporaryFile(
+            suffix=".png",
+            delete=False
+        )
 
         try:
 
-            response = client.models.generate_content(
-                model=model,
-                contents=[
-                    types.Part.from_bytes(
-                        data=image_bytes,
-                        mime_type="image/png"
-                    ),
-                    prompt
-                ]
+            image.save(
+                image_buffer.name,
+                format="PNG"
             )
 
-            text = getattr(
-                response,
-                "text",
-                None
-            )
+            with open(
+                image_buffer.name,
+                "rb"
+            ) as f:
 
-            if text:
+                image_bytes = f.read()
 
-                return clean_text(text)
+        finally:
 
-        except Exception as exc:
+            try:
+                os.unlink(
+                    image_buffer.name
+                )
+            except Exception:
+                pass
 
-            last_error = exc
 
-    if last_error:
+        client = get_gemini_client()
 
-        raise RuntimeError(
-            classify_gemini_error(
-                last_error
-            )
+
+        response = client.models.generate_content(
+            model=GEMINI_VISION_MODEL,
+            contents=[
+                types.Part.from_bytes(
+                    data=image_bytes,
+                    mime_type="image/png",
+                ),
+                (
+                    "Describe this visual from a PDF "
+                    "in a concise factual way. "
+                    "Include important labels, values, "
+                    "relationships, trends, categories, "
+                    "and other information that would "
+                    "help answer questions about it."
+                ),
+            ],
         )
+
+
+        if response and response.text:
+
+            return clean_text(
+                response.text
+            )
+
+
+    except Exception:
+
+        # Visual processing failure should not
+        # stop the entire PDF pipeline.
+        pass
+
 
     return ""
 
 
 # ============================================================
-# EXTRACT PDF
-# ============================================================
-
-def extract_pdf(uploaded_file):
-
-    suffix = (
-        Path(
-            uploaded_file.name
-        ).suffix
-        or ".pdf"
-    )
-
-    temp_path = None
-
-    try:
-
-        # ----------------------------------------------------
-        # Save uploaded PDF temporarily
-        # ----------------------------------------------------
-
-        with tempfile.NamedTemporaryFile(
-            delete=False,
-            suffix=suffix
-        ) as temp_file:
-
-            temp_file.write(
-                uploaded_file.getbuffer()
-            )
-
-            temp_path = temp_file.name
-
-        # ----------------------------------------------------
-        # Docling
-        # ----------------------------------------------------
-
-        converter = get_converter()
-
-        result = converter.convert(
-            temp_path
-        )
-
-        doc = result.document
-
-        elements = []
-
-        table_count = 0
-        visual_count = 0
-
-        # ----------------------------------------------------
-        # Iterate through document
-        # ----------------------------------------------------
-
-        try:
-
-            for item, level in doc.iterate_items():
-
-                item_class = (
-                    item.__class__.__name__
-                    .lower()
-                )
-
-                page = get_page_number(
-                    item
-                )
-
-                # --------------------------------------------
-                # TABLE
-                # --------------------------------------------
-
-                if "table" in item_class:
-
-                    table_text = table_to_text(
-                        item,
-                        doc
-                    )
-
-                    if table_text:
-
-                        elements.append(
-                            {
-                                "type": "table",
-                                "page": page,
-                                "content": table_text,
-                            }
-                        )
-
-                        table_count += 1
-
-                    continue
-
-                # --------------------------------------------
-                # PICTURE
-                # --------------------------------------------
-
-                if "picture" in item_class:
-
-                    continue
-
-                # --------------------------------------------
-                # NORMAL TEXT
-                # --------------------------------------------
-
-                text = get_item_text(
-                    item
-                )
-
-                if text:
-
-                    elements.append(
-                        {
-                            "type": "text",
-                            "page": page,
-                            "content": text,
-                        }
-                    )
-
-        except Exception as exc:
-
-            # Don't silently destroy the entire PDF.
-            # Preserve the exception so user gets useful info.
-            raise RuntimeError(
-                "Docling failed while extracting "
-                f"document items: {exc}"
-            ) from exc
-
-        # ----------------------------------------------------
-        # Process pictures separately
-        # ----------------------------------------------------
-
-        try:
-
-            pictures = getattr(
-                doc,
-                "pictures",
-                []
-            )
-
-            for picture in pictures:
-
-                page = get_page_number(
-                    picture
-                )
-
-                image_bytes = None
-
-                # --------------------------------------------
-                # Get image from Docling
-                # --------------------------------------------
-
-                try:
-
-                    image = picture.get_image(
-                        doc
-                    )
-
-                    if image is not None:
-
-                        buffer = BytesIO()
-
-                        image.save(
-                            buffer,
-                            format="PNG"
-                        )
-
-                        image_bytes = (
-                            buffer.getvalue()
-                        )
-
-                except Exception:
-
-                    image_bytes = None
-
-                # --------------------------------------------
-                # Gemini visual description
-                # --------------------------------------------
-
-                if image_bytes:
-
-                    try:
-
-                        description = describe_visual(
-                            image_bytes
-                        )
-
-                    except Exception as exc:
-
-                        description = (
-                            "Visual description unavailable: "
-                            + str(exc)
-                        )
-
-                    if description:
-
-                        elements.append(
-                            {
-                                "type": "visual",
-                                "page": page,
-                                "content": description,
-                            }
-                        )
-
-                        visual_count += 1
-
-        except Exception:
-
-            # Visual extraction failure should not destroy
-            # otherwise usable text/table extraction.
-            pass
-
-        # ----------------------------------------------------
-        # Sort by page
-        # ----------------------------------------------------
-
-        elements.sort(
-            key=lambda item: (
-                item.get("page")
-                if item.get("page") is not None
-                else 10**9
-            )
-        )
-
-        # ----------------------------------------------------
-        # Create chunks
-        # ----------------------------------------------------
-
-        chunks = make_chunks(
-            elements
-        )
-
-        if not chunks:
-
-            raise RuntimeError(
-                "No searchable text, tables, or visual "
-                "descriptions were extracted from the PDF."
-            )
-
-        # ----------------------------------------------------
-        # Jina embeddings
-        # ----------------------------------------------------
-
-        embeddings = embed_documents(
-            chunks
-        )
-
-        if embeddings.size == 0:
-
-            raise RuntimeError(
-                "Jina returned no embeddings."
-            )
-
-        # ----------------------------------------------------
-        # Normalize embeddings
-        # ----------------------------------------------------
-
-        faiss.normalize_L2(
-            embeddings
-        )
-
-        # ----------------------------------------------------
-        # FAISS
-        # ----------------------------------------------------
-
-        index = faiss.IndexFlatIP(
-            embeddings.shape[1]
-        )
-
-        index.add(
-            embeddings
-        )
-
-        # ----------------------------------------------------
-        # Number of pages
-        # ----------------------------------------------------
-
-        pages = 0
-
-        try:
-
-            pages = int(
-                getattr(
-                    doc,
-                    "num_pages",
-                    0
-                )
-                or 0
-            )
-
-        except Exception:
-
-            pages = 0
-
-        if not pages:
-
-            page_numbers = [
-                element["page"]
-                for element in elements
-                if element.get("page") is not None
-            ]
-
-            if page_numbers:
-
-                pages = max(
-                    page_numbers
-                )
-
-        # ----------------------------------------------------
-        # Metadata
-        # ----------------------------------------------------
-
-        metadata = []
-
-        for chunk in chunks:
-
-            metadata.append(
-                {
-                    "page": chunk.get(
-                        "page"
-                    ),
-                    "type": chunk.get(
-                        "type",
-                        "text"
-                    ),
-                }
-            )
-
-        stats = {
-            "tables": table_count,
-            "visuals": visual_count,
-        }
-
-        return {
-            "chunks": chunks,
-            "metadata": metadata,
-            "index": index,
-            "pages": pages,
-            "stats": stats,
-        }
-
-    finally:
-
-        # ----------------------------------------------------
-        # Cleanup temporary PDF
-        # ----------------------------------------------------
-
-        if temp_path:
-
-            try:
-
-                os.remove(
-                    temp_path
-                )
-
-            except Exception:
-
-                pass
-
-
-# ============================================================
-# PUBLIC PROCESS FUNCTION
-# ============================================================
-
-def process_pdf(uploaded_file):
-
-    return extract_pdf(
-        uploaded_file
-    )
-
-
-# ============================================================
-# JINA API
+# JINA EMBEDDINGS
 # ============================================================
 
 def jina_request(
     texts,
-    task
 ):
 
-    if not texts:
-
-        return []
+    api_key = get_secret(
+        "JINA_API_KEY"
+    )
 
     headers = {
-        "Authorization": (
-            f"Bearer {get_jina_key()}"
-        ),
+        "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
 
     payload = {
         "model": JINA_MODEL,
         "input": texts,
-        "task": task,
-        "dimensions": JINA_DIMENSIONS,
+        "encoding_type": "float",
     }
 
     response = requests.post(
-        JINA_ENDPOINT,
+        JINA_EMBEDDING_URL,
         headers=headers,
         json=payload,
-        timeout=180,
+        timeout=120,
     )
 
-    if response.status_code != 200:
-
-        raise RuntimeError(
-            "Jina Embeddings API error "
-            f"{response.status_code}: "
-            f"{response.text[:1000]}"
-        )
+    response.raise_for_status()
 
     result = response.json()
 
-    if "data" not in result:
-
-        raise RuntimeError(
-            "Unexpected response from Jina Embeddings API."
-        )
-
-    data = result["data"]
-
-    data = sorted(
-        data,
-        key=lambda item: item["index"]
+    data = result.get(
+        "data",
+        []
     )
 
-    return [
+    embeddings = [
         item["embedding"]
         for item in data
     ]
 
-
-# ============================================================
-# FORMAT DOCUMENT FOR EMBEDDING
-# ============================================================
-
-def format_document_for_embedding(
-    chunk
-):
-
-    chunk_type = chunk.get(
-        "type",
-        "text"
-    )
-
-    page = chunk.get(
-        "page"
-    )
-
-    prefix = ""
-
-    if page is not None:
-
-        prefix += (
-            f"[Page {page}] "
-        )
-
-    if chunk_type == "table":
-
-        prefix += "[TABLE] "
-
-    elif chunk_type == "visual":
-
-        prefix += "[VISUAL] "
-
-    return (
-        prefix
-        + chunk.get(
-            "text",
-            ""
-        )
+    return np.asarray(
+        embeddings,
+        dtype="float32"
     )
 
 
@@ -1080,40 +508,41 @@ def format_document_for_embedding(
 # ============================================================
 
 def embed_documents(
-    chunks
+    texts,
+    batch_size=32,
 ):
 
     all_embeddings = []
 
     for start in range(
         0,
-        len(chunks),
-        JINA_BATCH_SIZE
+        len(texts),
+        batch_size,
     ):
 
-        batch = chunks[
-            start:start + JINA_BATCH_SIZE
-        ]
-
-        texts = [
-            format_document_for_embedding(
-                chunk
-            )
-            for chunk in batch
+        batch = texts[
+            start:start + batch_size
         ]
 
         embeddings = jina_request(
-            texts,
-            task="retrieval.passage"
+            batch
         )
 
-        all_embeddings.extend(
+        all_embeddings.append(
             embeddings
         )
 
-    return np.asarray(
-        all_embeddings,
-        dtype="float32"
+
+    if not all_embeddings:
+
+        return np.empty(
+            (0, 0),
+            dtype="float32"
+        )
+
+
+    return np.vstack(
+        all_embeddings
     )
 
 
@@ -1125,21 +554,275 @@ def embed_query(
     query
 ):
 
-    embeddings = jina_request(
-        [query],
-        task="retrieval.query"
+    embedding = jina_request(
+        [query]
     )
 
-    if not embeddings:
+    return embedding[0]
 
-        raise RuntimeError(
-            "Jina returned no query embedding."
+
+# ============================================================
+# PDF EXTRACTION
+# ============================================================
+
+def extract_pdf(
+    uploaded_file
+):
+
+    converter = get_document_converter()
+
+
+    # --------------------------------------------------------
+    # Save uploaded PDF temporarily
+    # --------------------------------------------------------
+
+    suffix = Path(
+        uploaded_file.name
+    ).suffix or ".pdf"
+
+    with tempfile.NamedTemporaryFile(
+        suffix=suffix,
+        delete=False
+    ) as temp_file:
+
+        temp_file.write(
+            uploaded_file.getbuffer()
         )
 
-    return np.asarray(
-        embeddings[0],
-        dtype="float32"
-    )
+        temp_path = temp_file.name
+
+
+    try:
+
+        # ----------------------------------------------------
+        # Convert PDF
+        # ----------------------------------------------------
+
+        conversion_result = converter.convert(
+            temp_path
+        )
+
+        doc = conversion_result.document
+
+
+        # ----------------------------------------------------
+        # Get page count
+        # ----------------------------------------------------
+
+        try:
+
+            pages = len(
+                doc.pages
+            )
+
+        except Exception:
+
+            pages = 0
+
+
+        # ----------------------------------------------------
+        # Collect structured content
+        # ----------------------------------------------------
+
+        raw_items = []
+
+        table_count = 0
+        visual_count = 0
+
+
+        for item, level in doc.iterate_items():
+
+            page = get_page_number(
+                item
+            )
+
+
+            # ------------------------------------------------
+            # TABLE
+            # ------------------------------------------------
+
+            item_type = type(
+                item
+            ).__name__.lower()
+
+
+            if "table" in item_type:
+
+                table_text = table_to_text(
+                    item,
+                    doc
+                )
+
+                if table_text:
+
+                    raw_items.append(
+                        {
+                            "text": (
+                                "TABLE:\n"
+                                + table_text
+                            ),
+                            "page": page,
+                            "type": "table",
+                        }
+                    )
+
+                    table_count += 1
+
+                continue
+
+
+            # ------------------------------------------------
+            # PICTURE / VISUAL
+            # ------------------------------------------------
+
+            if "picture" in item_type:
+
+                description = describe_visual(
+                    item,
+                    doc
+                )
+
+                if description:
+
+                    raw_items.append(
+                        {
+                            "text": (
+                                "VISUAL DESCRIPTION:\n"
+                                + description
+                            ),
+                            "page": page,
+                            "type": "visual",
+                        }
+                    )
+
+                    visual_count += 1
+
+                continue
+
+
+            # ------------------------------------------------
+            # NORMAL TEXT
+            # ------------------------------------------------
+
+            text = get_item_text(
+                item
+            )
+
+            if text:
+
+                raw_items.append(
+                    {
+                        "text": text,
+                        "page": page,
+                        "type": "text",
+                    }
+                )
+
+
+        # ----------------------------------------------------
+        # Create chunks
+        # ----------------------------------------------------
+
+        chunks = []
+
+
+        for item in raw_items:
+
+            item_chunks = make_chunks(
+                item["text"],
+                page=item["page"],
+            )
+
+            for chunk in item_chunks:
+
+                chunk["type"] = item[
+                    "type"
+                ]
+
+                chunks.append(
+                    chunk
+                )
+
+
+        # ----------------------------------------------------
+        # Safety check
+        # ----------------------------------------------------
+
+        if not chunks:
+
+            raise RuntimeError(
+                "No searchable content could be extracted from this PDF."
+            )
+
+
+        # ----------------------------------------------------
+        # Embeddings
+        # ----------------------------------------------------
+
+        texts = [
+            chunk["text"]
+            for chunk in chunks
+        ]
+
+        embeddings = embed_documents(
+            texts
+        )
+
+
+        if len(embeddings) == 0:
+
+            raise RuntimeError(
+                "No embeddings were generated."
+            )
+
+
+        # ----------------------------------------------------
+        # FAISS
+        #
+        # Normalize vectors so inner product corresponds
+        # to cosine similarity.
+        # ----------------------------------------------------
+
+        faiss.normalize_L2(
+            embeddings
+        )
+
+        dimension = embeddings.shape[1]
+
+        index = faiss.IndexFlatIP(
+            dimension
+        )
+
+        index.add(
+            embeddings
+        )
+
+
+        # ----------------------------------------------------
+        # Return document knowledge base
+        # ----------------------------------------------------
+
+        return {
+            "pages": pages,
+            "chunks": len(chunks),
+            "tables": table_count,
+            "visuals": visual_count,
+            "chunks_data": chunks,
+            "embeddings": embeddings,
+            "index": index,
+        }
+
+
+    finally:
+
+        try:
+
+            os.unlink(
+                temp_path
+            )
+
+        except Exception:
+            pass
 
 
 # ============================================================
@@ -1147,43 +830,50 @@ def embed_query(
 # ============================================================
 
 def retrieve(
-    question,
-    index,
-    chunks,
-    metadata,
-    top_k=5
+    query,
+    document_data,
+    top_k=TOP_K,
 ):
 
-    if index is None:
+    index = document_data[
+        "index"
+    ]
 
-        return []
+    chunks = document_data[
+        "chunks_data"
+    ]
 
-    if not chunks:
 
-        return []
-
-    query_vector = embed_query(
-        question
-    ).reshape(
-        1,
-        -1
+    query_embedding = embed_query(
+        query
     )
+
+    query_embedding = (
+        query_embedding
+        .reshape(1, -1)
+        .astype("float32")
+    )
+
 
     faiss.normalize_L2(
-        query_vector
+        query_embedding
     )
 
-    number_to_retrieve = min(
+
+    k = min(
         top_k,
-        len(chunks)
+        index.ntotal
     )
+
 
     scores, indices = index.search(
-        query_vector,
-        number_to_retrieve
+        query_embedding,
+        k
     )
 
+
     results = []
+
 
     for score, idx in zip(
         scores[0],
@@ -1191,20 +881,18 @@ def retrieve(
     ):
 
         if idx < 0:
-
             continue
 
-        if idx >= len(chunks):
+        chunk = chunks[idx].copy()
 
-            continue
+        chunk["score"] = float(
+            score
+        )
 
         results.append(
-            {
-                "score": float(score),
-                "chunk": chunks[idx],
-                "metadata": metadata[idx],
-            }
+            chunk
         )
+
 
     return results
 
@@ -1214,55 +902,57 @@ def retrieve(
 # ============================================================
 
 def build_context(
-    results
+    retrieved_chunks
 ):
 
-    blocks = []
+    context_parts = []
 
-    for number, result in enumerate(
-        results,
-        start=1
+
+    for i, chunk in enumerate(
+        retrieved_chunks,
+        start=1,
     ):
 
-        chunk = result[
-            "chunk"
-        ]
-
-        metadata = result[
-            "metadata"
-        ]
-
-        page = metadata.get(
+        page = chunk.get(
             "page"
         )
 
-        chunk_type = metadata.get(
+        chunk_type = chunk.get(
             "type",
             "text"
         )
 
+        text = chunk.get(
+            "text",
+            ""
+        )
+
+
         if page is not None:
 
-            source = (
-                f"Page {page}"
+            header = (
+                f"[Retrieved Chunk {i} | "
+                f"Page {page} | "
+                f"{chunk_type.upper()}]"
             )
 
         else:
 
-            source = "Page unknown"
+            header = (
+                f"[Retrieved Chunk {i} | "
+                f"{chunk_type.upper()}]"
+            )
 
-        blocks.append(
-            f"""
-[Retrieved Source {number}]
-Type: {chunk_type}
-Source: {source}
 
-{chunk.get("text", "")}
-""".strip()
+        context_parts.append(
+            header
+            + "\n"
+            + text
         )
 
+
     return "\n\n".join(
-        blocks
+        context_parts
     )
 
 
@@ -1272,98 +962,80 @@ Source: {source}
 
 def generate_answer(
     question,
-    results
+    context,
 ):
-
-    if not results:
-
-        return (
-            "I couldn't find relevant information "
-            "in the document."
-        )
-
-    context = build_context(
-        results
-    )
 
     client = get_gemini_client()
 
+
     prompt = f"""
-You are DocuMind, an intelligent PDF assistant.
+You are DocuMind, an intelligent document
+question-answering assistant.
 
-Answer the user's question using ONLY the retrieved
-document context provided below.
+Answer the user's question using ONLY the
+provided document context.
 
-STRICT RULES:
-
-1. Use only the retrieved document context.
-2. Do not use outside knowledge.
-3. Do not invent facts, numbers, dates, names or conclusions.
-4. If the retrieved context does not contain enough information,
-   clearly say that the document context does not provide enough
-   information.
-5. Mention page numbers when useful.
-6. For tables, use the values actually present in the table.
-7. For charts or visuals, use only information contained in the
-   visual description.
-8. Keep the answer clear and reasonably concise.
-
-RETRIEVED DOCUMENT CONTEXT
-==========================
-
+DOCUMENT CONTEXT:
+-----------------
 {context}
+-----------------
 
-USER QUESTION
-=============
-
+USER QUESTION:
 {question}
+
+Instructions:
+
+1. Answer directly and clearly.
+2. Use only information supported by the context.
+3. Do not invent facts.
+4. If the context does not contain enough information,
+   clearly say that the information is not available
+   in the retrieved document content.
+5. When useful, mention page numbers.
+6. For tables, preserve important values and relationships.
+7. For charts or visuals, explain the information described
+   in the retrieved visual context.
+8. Keep the answer reasonably concise but informative.
 """
 
-    last_error = None
 
-    for model in GEMINI_MODELS:
-
-        try:
-
-            response = client.models.generate_content(
-                model=model,
-                contents=prompt
-            )
-
-            text = getattr(
-                response,
-                "text",
-                None
-            )
-
-            if text:
-
-                return text.strip()
-
-        except Exception as exc:
-
-            last_error = exc
-
-    if last_error:
-
-        raise RuntimeError(
-            classify_gemini_error(
-                last_error
-            )
-        )
-
-    return (
-        "I could not generate an answer "
-        "from the retrieved document context."
+    response = client.models.generate_content(
+        model=GEMINI_TEXT_MODEL,
+        contents=prompt,
     )
 
 
+    if not response:
+
+        return (
+            "I couldn't generate an answer "
+            "from the document."
+        )
+
+
+    if not response.text:
+
+        return (
+            "I couldn't generate an answer "
+            "from the retrieved document context."
+        )
+
+
+    return response.text.strip()
+
+
 # ============================================================
-# CACHE CLEANUP
+# CLEAR CACHE
 # ============================================================
 
 def clear_backend_cache():
 
-    # We intentionally keep expensive cached clients.
-    # The active PDF/index is stored in session_state.
-    return None
+    # Streamlit resource caches
+    # will be recreated when needed.
+
+    try:
+
+        st.cache_resource.clear()
+
+    except Exception:
+        pass
