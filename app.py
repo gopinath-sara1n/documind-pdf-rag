@@ -1,13 +1,13 @@
 import streamlit as st
+from pathlib import Path
 
 from rag_pipeline import (
-    process_pdf,
+    extract_pdf,
     retrieve,
+    build_context,
     generate_answer,
     clear_backend_cache,
 )
-
-from about import render_about
 
 
 # ============================================================
@@ -23,766 +23,302 @@ st.set_page_config(
 
 
 # ============================================================
-# SESSION STATE
-# ============================================================
-
-DEFAULT_STATE = {
-
-    "ready": False,
-
-    "file_name": None,
-
-    "pages": 0,
-
-    "chunks": [],
-
-    "metadata": [],
-
-    "index": None,
-
-    "messages": [],
-
-    "stats": {},
-
-    "pending_question": None,
-
-}
-
-
-for key, value in DEFAULT_STATE.items():
-
-    if key not in st.session_state:
-
-        st.session_state[key] = value
-
-
-# ============================================================
-# CSS
+# CUSTOM CSS
+# IMPORTANT:
+# Visible UI content is NOT written as raw HTML.
+# HTML is used ONLY for CSS.
 # ============================================================
 
 st.markdown(
     """
-<style>
+    <style>
 
-/* ---------------------------------------------------------
-   Hide default Streamlit elements
---------------------------------------------------------- */
+    /* -----------------------------
+       Global
+    ----------------------------- */
 
-#MainMenu,
-footer,
-header {
-    visibility: hidden;
-}
-
-
-/* ---------------------------------------------------------
-   Main container
---------------------------------------------------------- */
-
-.block-container {
-
-    max-width: 1180px;
-
-    padding-top: 1.4rem;
-
-    padding-bottom: 2rem;
-
-}
-
-
-/* ---------------------------------------------------------
-   Brand
---------------------------------------------------------- */
-
-.brand-row {
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: space-between;
-
-    gap: 20px;
-
-    margin-bottom: 24px;
-
-}
-
-
-.brand-left {
-
-    display: flex;
-
-    align-items: center;
-
-    gap: 13px;
-
-}
-
-
-.brand-icon {
-
-    width: 48px;
-
-    height: 48px;
-
-    border-radius: 14px;
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-    font-size: 25px;
-
-    background:
-        linear-gradient(
-            135deg,
-            #4f46e5,
-            #7c3aed
-        );
-
-    box-shadow:
-        0 8px 24px
-        rgba(79,70,229,.22);
-
-}
-
-
-.brand-title {
-
-    font-size: 25px;
-
-    font-weight: 800;
-
-    line-height: 1.05;
-
-    color: #111827;
-
-}
-
-
-.brand-subtitle {
-
-    font-size: 13px;
-
-    color: #64748b;
-
-    margin-top: 4px;
-
-}
-
-
-.status-pill {
-
-    padding: 9px 15px;
-
-    border-radius: 999px;
-
-    background: #eef2ff;
-
-    border: 1px solid #c7d2fe;
-
-    color: #4338ca;
-
-    font-size: 13px;
-
-    font-weight: 700;
-
-    white-space: nowrap;
-
-}
-
-
-/* ---------------------------------------------------------
-   Hero
---------------------------------------------------------- */
-
-.hero {
-
-    padding: 42px 38px;
-
-    border-radius: 25px;
-
-    background:
-        linear-gradient(
-            135deg,
-            #eef2ff 0%,
-            #f5f3ff 48%,
-            #ecfeff 100%
-        );
-
-    border: 1px solid #e0e7ff;
-
-    margin-bottom: 24px;
-
-}
-
-
-.hero-badge {
-
-    display: inline-block;
-
-    padding: 8px 13px;
-
-    border-radius: 999px;
-
-    background: white;
-
-    border: 1px solid #ddd6fe;
-
-    color: #5b21b6;
-
-    font-size: 13px;
-
-    font-weight: 700;
-
-    margin-bottom: 16px;
-
-}
-
-
-.hero h1 {
-
-    margin: 0;
-
-    font-size: 42px;
-
-    line-height: 1.1;
-
-    color: #111827;
-
-    letter-spacing: -1px;
-
-}
-
-
-.hero p {
-
-    max-width: 760px;
-
-    margin: 14px 0 0;
-
-    color: #475569;
-
-    font-size: 16px;
-
-    line-height: 1.7;
-
-}
-
-
-/* ---------------------------------------------------------
-   Upload card
---------------------------------------------------------- */
-
-.upload-card {
-
-    min-height: 260px;
-
-    padding: 34px 25px 28px;
-
-    border-radius: 24px;
-
-    border: 2px dashed #c7d2fe;
-
-    background:
-        linear-gradient(
+    .stApp {
+        background: linear-gradient(
             180deg,
-            #ffffff,
-            #f8faff
+            #f8faff 0%,
+            #ffffff 38%,
+            #f8fafc 100%
         );
-
-    text-align: center;
-
-    display: flex;
-
-    flex-direction: column;
-
-    align-items: center;
-
-    justify-content: center;
-
-}
-
-
-.upload-icon {
-
-    width: 64px;
-
-    height: 64px;
-
-    border-radius: 20px;
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-    font-size: 31px;
-
-    background: #eef2ff;
-
-    margin-bottom: 15px;
-
-}
-
-
-.upload-title {
-
-    font-size: 22px;
-
-    font-weight: 800;
-
-    color: #111827;
-
-}
-
-
-.upload-text {
-
-    color: #64748b;
-
-    margin-top: 7px;
-
-    max-width: 520px;
-
-    line-height: 1.55;
-
-}
-
-
-.file-limit {
-
-    text-align: center;
-
-    color: #64748b;
-
-    font-size: 13px;
-
-    margin: 8px 0 18px;
-
-}
-
-
-/* ---------------------------------------------------------
-   Streamlit uploader
---------------------------------------------------------- */
-
-div[data-testid="stFileUploader"] {
-
-    margin-top: -84px;
-
-    position: relative;
-
-    z-index: 2;
-
-}
-
-
-div[data-testid="stFileUploaderDropzone"] {
-
-    min-height: 150px;
-
-    border: 0 !important;
-
-    background: transparent !important;
-
-    box-shadow: none !important;
-
-}
-
-
-div[data-testid="stFileUploaderDropzoneInstructions"] {
-
-    padding-top: 90px;
-
-}
-
-
-/* ---------------------------------------------------------
-   Capabilities
---------------------------------------------------------- */
-
-.capability-card {
-
-    margin-top: 24px;
-
-    padding: 24px;
-
-    border-radius: 22px;
-
-    background: #ffffff;
-
-    border: 1px solid #e5e7eb;
-
-    box-shadow:
-        0 8px 30px
-        rgba(15,23,42,.05);
-
-}
-
-
-.capability-title {
-
-    font-size: 17px;
-
-    font-weight: 800;
-
-    color: #111827;
-
-    margin-bottom: 16px;
-
-}
-
-
-.pipeline {
-
-    display: flex;
-
-    flex-wrap: wrap;
-
-    gap: 10px;
-
-}
-
-
-.pipeline-step {
-
-    padding: 9px 13px;
-
-    border-radius: 999px;
-
-    background: #f8fafc;
-
-    border: 1px solid #e2e8f0;
-
-    color: #334155;
-
-    font-size: 13px;
-
-    font-weight: 600;
-
-}
-
-
-/* ---------------------------------------------------------
-   Document ready
---------------------------------------------------------- */
-
-.document-ready {
-
-    padding: 22px 24px;
-
-    border-radius: 20px;
-
-    background:
-        linear-gradient(
-            135deg,
-            #f0fdf4,
-            #ecfdf5
-        );
-
-    border: 1px solid #bbf7d0;
-
-    margin-bottom: 18px;
-
-}
-
-
-.document-name {
-
-    font-size: 20px;
-
-    font-weight: 800;
-
-    color: #14532d;
-
-}
-
-
-.document-status {
-
-    color: #166534;
-
-    font-size: 13px;
-
-    margin-top: 4px;
-
-}
-
-
-/* ---------------------------------------------------------
-   Metrics
---------------------------------------------------------- */
-
-.metric-card {
-
-    padding: 19px;
-
-    min-height: 112px;
-
-    border-radius: 18px;
-
-    background: #ffffff;
-
-    border: 1px solid #e5e7eb;
-
-    box-shadow:
-        0 5px 22px
-        rgba(15,23,42,.045);
-
-}
-
-
-.metric-icon {
-
-    font-size: 21px;
-
-}
-
-
-.metric-value {
-
-    font-size: 25px;
-
-    font-weight: 800;
-
-    color: #111827;
-
-    margin-top: 5px;
-
-}
-
-
-.metric-label {
-
-    color: #64748b;
-
-    font-size: 12px;
-
-}
-
-
-/* ---------------------------------------------------------
-   Chat header
---------------------------------------------------------- */
-
-.gradient-card {
-
-    margin-top: 22px;
-
-    padding: 23px;
-
-    border-radius: 22px;
-
-    background:
-        linear-gradient(
-            135deg,
-            #4f46e5,
-            #7c3aed
-        );
-
-    color: white;
-
-    box-shadow:
-        0 12px 35px
-        rgba(79,70,229,.2);
-
-}
-
-
-/* ---------------------------------------------------------
-   Section label
---------------------------------------------------------- */
-
-.section-label {
-
-    font-size: 13px;
-
-    font-weight: 800;
-
-    letter-spacing: .4px;
-
-    text-transform: uppercase;
-
-    color: #64748b;
-
-    margin: 24px 0 10px;
-
-}
-
-
-/* ---------------------------------------------------------
-   About
---------------------------------------------------------- */
-
-.about-card {
-
-    padding: 24px;
-
-    border-radius: 20px;
-
-    background: #ffffff;
-
-    border: 1px solid #e5e7eb;
-
-    margin-bottom: 15px;
-
-}
-
-
-.about-icon {
-
-    font-size: 27px;
-
-}
-
-
-.about-title {
-
-    font-size: 18px;
-
-    font-weight: 800;
-
-    margin-top: 8px;
-
-    color: #111827;
-
-}
-
-
-.about-text {
-
-    color: #64748b;
-
-    line-height: 1.65;
-
-    margin-top: 6px;
-
-}
-
-
-/* ---------------------------------------------------------
-   Buttons
---------------------------------------------------------- */
-
-div.stButton > button {
-
-    border-radius: 12px;
-
-    font-weight: 700;
-
-    min-height: 42px;
-
-}
-
-
-/* ---------------------------------------------------------
-   Footer
---------------------------------------------------------- */
-
-.footer {
-
-    text-align: center;
-
-    color: #94a3b8;
-
-    font-size: 12px;
-
-    padding: 28px 0 5px;
-
-}
-
-
-/* ---------------------------------------------------------
-   Mobile
---------------------------------------------------------- */
-
-@media (max-width: 700px) {
-
-    .hero {
-
-        padding: 30px 22px;
-
     }
 
-    .hero h1 {
+    .block-container {
+        max-width: 1180px;
+        padding-top: 1.5rem;
+        padding-bottom: 3rem;
+    }
 
-        font-size: 32px;
+    /* -----------------------------
+       Header
+    ----------------------------- */
 
+    .brand-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #4f46e5, #7c3aed);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 25px;
+        box-shadow: 0 8px 22px rgba(79, 70, 229, 0.22);
     }
 
     .brand-title {
+        font-size: 24px;
+        font-weight: 800;
+        color: #111827;
+        line-height: 1.1;
+    }
 
-        font-size: 21px;
-
+    .brand-subtitle {
+        color: #64748b;
+        font-size: 13px;
+        margin-top: 3px;
     }
 
     .status-pill {
-
-        font-size: 11px;
-
-        padding: 8px 10px;
-
+        background: #eef2ff;
+        color: #4f46e5;
+        border: 1px solid #c7d2fe;
+        padding: 8px 14px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 700;
+        text-align: center;
     }
 
-}
+    /* -----------------------------
+       Hero
+    ----------------------------- */
 
-</style>
-""",
-    unsafe_allow_html=True
+    .hero-title {
+        font-size: 46px;
+        font-weight: 850;
+        line-height: 1.08;
+        letter-spacing: -1.8px;
+        color: #111827;
+        margin-bottom: 12px;
+    }
+
+    .hero-description {
+        color: #64748b;
+        font-size: 17px;
+        line-height: 1.7;
+        max-width: 760px;
+    }
+
+    /* -----------------------------
+       Cards
+    ----------------------------- */
+
+    .card-title {
+        font-size: 18px;
+        font-weight: 800;
+        color: #111827;
+    }
+
+    .card-text {
+        color: #64748b;
+        line-height: 1.6;
+    }
+
+    /* -----------------------------
+       Upload area
+    ----------------------------- */
+
+    .upload-title {
+        font-size: 21px;
+        font-weight: 800;
+        color: #111827;
+        text-align: center;
+    }
+
+    .upload-description {
+        color: #64748b;
+        text-align: center;
+        line-height: 1.6;
+    }
+
+    /* -----------------------------
+       Capability badges
+    ----------------------------- */
+
+    .badge {
+        display: inline-block;
+        padding: 9px 13px;
+        border-radius: 999px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        color: #334155;
+        font-size: 13px;
+        font-weight: 650;
+        margin: 3px;
+    }
+
+    /* -----------------------------
+       Document ready
+    ----------------------------- */
+
+    .ready-title {
+        font-size: 22px;
+        font-weight: 800;
+        color: #166534;
+    }
+
+    .ready-text {
+        color: #475569;
+        line-height: 1.6;
+    }
+
+    /* -----------------------------
+       Chat
+    ----------------------------- */
+
+    .chat-header {
+        background: linear-gradient(
+            135deg,
+            #4f46e5,
+            #7c3aed
+        );
+        color: white;
+        padding: 20px 24px;
+        border-radius: 18px;
+        margin-bottom: 18px;
+        box-shadow: 0 10px 28px rgba(79, 70, 229, 0.18);
+    }
+
+    .chat-header-title {
+        font-size: 21px;
+        font-weight: 800;
+    }
+
+    .chat-header-text {
+        font-size: 13px;
+        opacity: 0.88;
+        margin-top: 4px;
+    }
+
+    /* -----------------------------
+       Metric cards
+    ----------------------------- */
+
+    [data-testid="stMetric"] {
+        background: white;
+        border: 1px solid #e2e8f0;
+        padding: 15px;
+        border-radius: 14px;
+    }
+
+    /* -----------------------------
+       Buttons
+    ----------------------------- */
+
+    .stButton > button {
+        border-radius: 10px;
+        font-weight: 650;
+        border: 1px solid #e2e8f0;
+        min-height: 42px;
+    }
+
+    /* -----------------------------
+       Tabs
+    ----------------------------- */
+
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background: #f1f5f9;
+        padding: 5px;
+        border-radius: 13px;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 9px;
+        padding: 8px 18px;
+        font-weight: 700;
+    }
+
+    /* -----------------------------
+       Footer
+    ----------------------------- */
+
+    .footer {
+        text-align: center;
+        color: #94a3b8;
+        font-size: 12px;
+        padding-top: 30px;
+    }
+
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
+
+
+# ============================================================
+# SESSION STATE
+# ============================================================
+
+if "document_data" not in st.session_state:
+    st.session_state.document_data = None
+
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+
+if "document_name" not in st.session_state:
+    st.session_state.document_name = None
+
+if "processing" not in st.session_state:
+    st.session_state.processing = False
 
 
 # ============================================================
 # HEADER
 # ============================================================
 
-st.markdown(
-    """
-    <div class="brand-row">
+header_left, header_right = st.columns([7, 2])
 
-        <div class="brand-left">
+with header_left:
+    col_icon, col_brand = st.columns([0.65, 5])
 
-            <div class="brand-icon">
-                📄
-            </div>
+    with col_icon:
+        st.markdown(
+            '<div class="brand-icon">📄</div>',
+            unsafe_allow_html=True,
+        )
 
-            <div>
+    with col_brand:
+        st.markdown(
+            '<div class="brand-title">DocuMind</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            '<div class="brand-subtitle">Intelligent PDF Assistant</div>',
+            unsafe_allow_html=True,
+        )
 
-                <div class="brand-title">
-                    DocuMind
-                </div>
+with header_right:
+    st.markdown(
+        '<div class="status-pill">✦ AI-Powered RAG</div>',
+        unsafe_allow_html=True,
+    )
 
-                <div class="brand-subtitle">
-                    Intelligent PDF Assistant
-                </div>
 
-            </div>
-
-        </div>
-
-        <div class="status-pill">
-            ✦ AI-Powered RAG
-        </div>
-
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+st.write("")
 
 
 # ============================================================
-# TABS
+# TOP NAVIGATION
 # ============================================================
 
-ask_tab, about_tab = st.tabs(
+tab_ask, tab_about = st.tabs(
     [
         "💬 Ask your PDF",
-        "✨ About & Help"
+        "✨ About & Help",
     ]
 )
 
@@ -791,568 +327,405 @@ ask_tab, about_tab = st.tabs(
 # ASK TAB
 # ============================================================
 
-with ask_tab:
+with tab_ask:
 
-    # ========================================================
-    # BEFORE PDF PROCESSING
-    # ========================================================
+    # --------------------------------------------------------
+    # HERO
+    # --------------------------------------------------------
 
-    if not st.session_state.ready:
+    st.markdown(
+        "### 📚 Intelligent Document Understanding"
+    )
 
-        # ----------------------------------------------------
-        # Hero
-        # ----------------------------------------------------
+    st.markdown(
+        '<div class="hero-title">Ask your PDF anything.</div>',
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        """
+        <div class="hero-description">
+        Upload a document and let DocuMind understand its
+        text, tables, charts and visuals. Then ask questions
+        naturally and get answers grounded in the document.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.write("")
+    st.write("")
+
+
+    # --------------------------------------------------------
+    # UPLOAD CARD
+    # --------------------------------------------------------
+
+    with st.container(border=True):
+
+        st.markdown(
+            '<div class="upload-title">📤 Drop your PDF here</div>',
+            unsafe_allow_html=True,
+        )
 
         st.markdown(
             """
-            <div class="hero">
-
-                <div class="hero-badge">
-                    📚 Intelligent Document Understanding
-                </div>
-
-                <h1>
-                    Ask your PDF anything.
-                </h1>
-
-                <p>
-                    Upload a document and let DocuMind understand
-                    its text, tables, charts and visuals.
-                    Then ask questions naturally and get answers
-                    grounded in the document.
-                </p>
-
+            <div class="upload-description">
+            Upload a PDF to create your temporary document
+            knowledge base.
             </div>
             """,
-            unsafe_allow_html=True
+            unsafe_allow_html=True,
         )
 
+        st.write("")
 
-        # ----------------------------------------------------
-        # Upload visual card
-        # ----------------------------------------------------
-
-        st.markdown(
-            """
-            <div class="upload-card">
-
-                <div class="upload-icon">
-                    📤
-                </div>
-
-                <div class="upload-title">
-                    Drop your PDF here
-                </div>
-
-                <div class="upload-text">
-                    Upload a PDF to create your temporary
-                    document knowledge base.
-                </div>
-
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-
-        # ----------------------------------------------------
-        # File limit
-        # ----------------------------------------------------
-
-        st.markdown(
-            """
-            <div class="file-limit">
-                📦 Maximum file size:
-                <b>500 MB</b>
-                &nbsp;•&nbsp;
-                📄 PDF only
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-
-        # ----------------------------------------------------
-        # Actual Streamlit uploader
-        # ----------------------------------------------------
-
-        uploaded = st.file_uploader(
-            "Upload PDF",
+        uploaded_file = st.file_uploader(
+            "Choose a PDF",
             type=["pdf"],
+            accept_multiple_files=False,
+            help="Maximum file size: 500 MB",
             label_visibility="collapsed",
-            key="pdf_uploader"
         )
 
+        st.caption("📦 Maximum file size: **500 MB** • 📄 PDF only")
 
-        # ----------------------------------------------------
-        # Selected file
-        # ----------------------------------------------------
 
-        if uploaded:
+    st.write("")
 
-            file_size_mb = (
-                uploaded.size
-                /
-                (1024 * 1024)
+
+    # --------------------------------------------------------
+    # PROCESS DOCUMENT
+    # --------------------------------------------------------
+
+    if uploaded_file is not None:
+
+        new_document = (
+            st.session_state.document_name
+            != uploaded_file.name
+        )
+
+        if new_document:
+
+            process_col1, process_col2 = st.columns(
+                [5, 1]
             )
 
-            st.markdown(
-                f"""
-                <div class="document-ready">
+            with process_col1:
+                st.info(
+                    f"📄 **{uploaded_file.name}** is ready to process."
+                )
 
-                    <div class="document-name">
-                        📄 {uploaded.name}
-                    </div>
+            with process_col2:
+                process_clicked = st.button(
+                    "🚀 Process PDF",
+                    type="primary",
+                    use_container_width=True,
+                )
 
-                    <div class="document-status">
-                        Ready to create a temporary
-                        knowledge base
-                        · {file_size_mb:.1f} MB
-                    </div>
+            if process_clicked:
 
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-
-            # ------------------------------------------------
-            # Process button
-            # ------------------------------------------------
-
-            if st.button(
-                "🚀 Process PDF",
-                type="primary",
-                use_container_width=True
-            ):
+                st.session_state.processing = True
 
                 with st.status(
-                    "Building your document knowledge base...",
-                    expanded=True
+                    "Processing your PDF...",
+                    expanded=True,
                 ) as status:
+
+                    st.write("📖 Reading PDF structure...")
+                    st.write("📊 Extracting text and tables...")
+                    st.write("🖼️ Processing visual content...")
+                    st.write("🔎 Creating searchable embeddings...")
+                    st.write("🧠 Building document knowledge base...")
 
                     try:
 
-                        progress = st.empty()
-
-                        progress.write(
-                            "📄 Extracting text, tables and visuals..."
+                        document_data = extract_pdf(
+                            uploaded_file
                         )
 
-                        result = process_pdf(
-                            uploaded
+                        st.session_state.document_data = (
+                            document_data
                         )
 
-                        progress.write(
-                            "🧠 Creating embeddings and vector index..."
+                        st.session_state.document_name = (
+                            uploaded_file.name
                         )
 
-                        # Store result
-                        st.session_state.chunks = (
-                            result["chunks"]
-                        )
-
-                        st.session_state.metadata = (
-                            result["metadata"]
-                        )
-
-                        st.session_state.index = (
-                            result["index"]
-                        )
-
-                        st.session_state.pages = (
-                            result["pages"]
-                        )
-
-                        st.session_state.stats = (
-                            result["stats"]
-                        )
-
-                        st.session_state.file_name = (
-                            uploaded.name
-                        )
-
-                        st.session_state.messages = []
-
-                        st.session_state.pending_question = None
-
-                        st.session_state.ready = True
+                        st.session_state.chat_history = []
 
                         status.update(
-                            label="✅ Document is ready!",
+                            label="Document ready!",
                             state="complete",
-                            expanded=False
+                            expanded=False,
                         )
 
+                        st.session_state.processing = False
                         st.rerun()
 
-                    except Exception as exc:
+                    except Exception as e:
 
                         status.update(
-                            label="❌ Processing failed",
+                            label="Processing failed",
                             state="error",
-                            expanded=True
+                            expanded=True,
                         )
+
+                        st.session_state.processing = False
 
                         st.error(
-                            f"{type(exc).__name__}: {exc}"
+                            "The PDF could not be processed."
                         )
 
+                        with st.expander(
+                            "Technical details"
+                        ):
+                            st.exception(e)
 
-        # ----------------------------------------------------
-        # Capabilities
-        # ----------------------------------------------------
+
+    # --------------------------------------------------------
+    # CAPABILITIES
+    # --------------------------------------------------------
+
+    with st.container(border=True):
 
         st.markdown(
-            """
-            <div class="capability-card">
+            '<div class="card-title">🧠 What DocuMind can understand</div>',
+            unsafe_allow_html=True,
+        )
 
-                <div class="capability-title">
-                    🧠 What DocuMind can understand
-                </div>
+        st.write("")
 
-                <div class="pipeline">
+        badges = [
+            "📄 PDF Text",
+            "📊 Tables",
+            "📈 Charts",
+            "🖼️ Visuals",
+            "🔎 Page-aware Retrieval",
+            "💬 Natural Questions",
+        ]
 
-                    <span class="pipeline-step">
-                        📄 PDF Text
-                    </span>
+        badge_html = "".join(
+            f'<span class="badge">{badge}</span>'
+            for badge in badges
+        )
 
-                    <span class="pipeline-step">
-                        📊 Tables
-                    </span>
-
-                    <span class="pipeline-step">
-                        📈 Charts
-                    </span>
-
-                    <span class="pipeline-step">
-                        🖼️ Visuals
-                    </span>
-
-                    <span class="pipeline-step">
-                        🔎 Page-aware Retrieval
-                    </span>
-
-                    <span class="pipeline-step">
-                        💬 Natural Questions
-                    </span>
-
-                </div>
-
-            </div>
-            """,
-            unsafe_allow_html=True
+        st.markdown(
+            f'<div>{badge_html}</div>',
+            unsafe_allow_html=True,
         )
 
 
     # ========================================================
-    # AFTER PDF PROCESSING
+    # DOCUMENT READY SECTION
     # ========================================================
 
-    else:
+    if st.session_state.document_data is not None:
 
-        stats = (
-            st.session_state.stats
-            or {}
-        )
+        data = st.session_state.document_data
+
+
+        st.write("")
+        st.write("")
 
 
         # ----------------------------------------------------
-        # Document header
+        # READY CARD
         # ----------------------------------------------------
 
-        document_col, clear_col = st.columns(
-            [5, 1]
-        )
+        with st.container(border=True):
 
-        with document_col:
+            st.markdown(
+                '<div class="ready-title">✅ Document ready</div>',
+                unsafe_allow_html=True,
+            )
 
             st.markdown(
                 f"""
-                <div class="document-ready">
-
-                    <div class="document-name">
-                        📄 {st.session_state.file_name}
-                    </div>
-
-                    <div class="document-status">
-                        ● Document ready for questions
-                    </div>
-
+                <div class="ready-text">
+                <b>{st.session_state.document_name}</b>
+                has been processed and is ready for questions.
                 </div>
                 """,
-                unsafe_allow_html=True
+                unsafe_allow_html=True,
             )
 
-
-        with clear_col:
-
-            if st.button(
-                "🗑️ Clear",
-                use_container_width=True
-            ):
-
-                clear_backend_cache()
-
-                for key, value in DEFAULT_STATE.items():
-
-                    st.session_state[key] = value
-
-                st.rerun()
+            st.write("")
 
 
-        # ----------------------------------------------------
-        # Metrics
-        # ----------------------------------------------------
+            # Safely read metrics
+            pages = data.get("pages", 0)
+            chunks = data.get("chunks", 0)
+            tables = data.get("tables", 0)
+            visuals = data.get("visuals", 0)
 
-        metrics = [
 
-            (
-                "📄",
-                st.session_state.pages,
-                "Pages"
-            ),
+            metric1, metric2, metric3, metric4 = st.columns(4)
 
-            (
-                "🧩",
-                len(st.session_state.chunks),
-                "Chunks"
-            ),
+            with metric1:
+                st.metric(
+                    "📄 Pages",
+                    pages,
+                )
 
-            (
-                "📊",
-                stats.get(
-                    "tables",
-                    0
-                ),
-                "Tables"
-            ),
+            with metric2:
+                st.metric(
+                    "🧩 Chunks",
+                    chunks,
+                )
 
-            (
-                "🖼️",
-                stats.get(
-                    "visuals",
-                    0
-                ),
-                "Visuals"
-            ),
+            with metric3:
+                st.metric(
+                    "📊 Tables",
+                    tables,
+                )
 
-        ]
-
-        metric_columns = st.columns(4)
-
-        for col, (
-            icon,
-            value,
-            label
-        ) in zip(
-            metric_columns,
-            metrics
-        ):
-
-            with col:
-
-                st.markdown(
-                    f"""
-                    <div class="metric-card">
-
-                        <div class="metric-icon">
-                            {icon}
-                        </div>
-
-                        <div class="metric-value">
-                            {value}
-                        </div>
-
-                        <div class="metric-label">
-                            {label}
-                        </div>
-
-                    </div>
-                    """,
-                    unsafe_allow_html=True
+            with metric4:
+                st.metric(
+                    "🖼️ Visuals",
+                    visuals,
                 )
 
 
+        st.write("")
+
+
         # ----------------------------------------------------
-        # Chat header
+        # CHAT HEADER
         # ----------------------------------------------------
 
         st.markdown(
             """
-            <div class="gradient-card">
-
-                <b>
-                    💬 Ask your PDF
-                </b>
-
-                <br>
-
-                <span style="opacity:.9">
-                    Questions are answered using
-                    the retrieved document context.
-                </span>
-
+            <div class="chat-header">
+                <div class="chat-header-title">
+                    💬 Ask your document
+                </div>
+                <div class="chat-header-text">
+                    Answers are generated from the retrieved
+                    content of your uploaded PDF.
+                </div>
             </div>
             """,
-            unsafe_allow_html=True
+            unsafe_allow_html=True,
         )
 
 
         # ----------------------------------------------------
-        # Quick questions
+        # QUICK QUESTIONS
         # ----------------------------------------------------
 
-        st.markdown(
-            '<div class="section-label">'
-            'Quick questions'
-            '</div>',
-            unsafe_allow_html=True
-        )
+        st.markdown("**⚡ Quick questions**")
 
-        quick_questions = [
+        q1, q2, q3, q4 = st.columns(4)
 
-            (
+        quick_question = None
+
+        with q1:
+            if st.button(
                 "📌 Summarize",
-                "Summarize the document."
-            ),
-
-            (
-                "🔍 Key findings",
-                "What are the key findings in the document?"
-            ),
-
-            (
-                "📊 Tables",
-                "What are the most important tables and what do they show?"
-            ),
-
-            (
-                "📈 Charts",
-                "What do the important charts or figures show?"
-            ),
-
-        ]
-
-        quick_columns = st.columns(4)
-
-        for col, (
-            label,
-            question
-        ) in zip(
-            quick_columns,
-            quick_questions
-        ):
-
-            with col:
-
-                if st.button(
-                    label,
-                    use_container_width=True
-                ):
-
-                    st.session_state.pending_question = (
-                        question
-                    )
-
-                    st.rerun()
-
-
-        # ----------------------------------------------------
-        # Existing conversation
-        # ----------------------------------------------------
-
-        if st.session_state.messages:
-
-            st.markdown(
-                '<div class="section-label">'
-                'Conversation'
-                '</div>',
-                unsafe_allow_html=True
-            )
-
-
-        for message in st.session_state.messages:
-
-            with st.chat_message(
-                message["role"]
+                use_container_width=True,
             ):
-
-                st.markdown(
-                    message["content"]
+                quick_question = (
+                    "Summarize the main points of this document."
                 )
 
-                if message.get(
-                    "pages"
-                ):
+        with q2:
+            if st.button(
+                "🔍 Key findings",
+                use_container_width=True,
+            ):
+                quick_question = (
+                    "What are the key findings or important points in this document?"
+                )
 
-                    st.caption(
-                        "📄 Supporting pages: "
-                        +
-                        ", ".join(
-                            map(
-                                str,
-                                message["pages"]
-                            )
+        with q3:
+            if st.button(
+                "📊 Tables",
+                use_container_width=True,
+            ):
+                quick_question = (
+                    "What important information is contained in the tables?"
+                )
+
+        with q4:
+            if st.button(
+                "📈 Charts",
+                use_container_width=True,
+            ):
+                quick_question = (
+                    "Explain the important charts, graphs, or visual data in the document."
+                )
+
+
+        # ----------------------------------------------------
+        # CHAT HISTORY
+        # ----------------------------------------------------
+
+        for message in st.session_state.chat_history:
+
+            role = message.get("role")
+            content = message.get("content")
+            pages_used = message.get("pages", [])
+
+            if role == "user":
+
+                with st.chat_message("user"):
+                    st.write(content)
+
+            else:
+
+                with st.chat_message("assistant"):
+
+                    st.write(content)
+
+                    if pages_used:
+
+                        unique_pages = sorted(
+                            set(pages_used)
                         )
-                    )
+
+                        page_text = ", ".join(
+                            str(p)
+                            for p in unique_pages
+                        )
+
+                        st.caption(
+                            f"📍 Supporting pages: {page_text}"
+                        )
 
 
         # ----------------------------------------------------
-        # Chat input
+        # QUESTION INPUT
         # ----------------------------------------------------
 
-        question = st.chat_input(
+        user_question = st.chat_input(
             "Ask a question about your PDF..."
         )
 
 
-        # ----------------------------------------------------
-        # Quick-question handling
-        # ----------------------------------------------------
-
-        if st.session_state.pending_question:
-
-            question = (
-                st.session_state.pending_question
-            )
-
-            st.session_state.pending_question = None
+        if quick_question is not None:
+            user_question = quick_question
 
 
         # ----------------------------------------------------
-        # Process question
+        # ANSWER QUESTION
         # ----------------------------------------------------
 
-        if question:
+        if user_question:
 
-            # -----------------------------------------------
-            # User message
-            # -----------------------------------------------
-
-            st.session_state.messages.append(
+            st.session_state.chat_history.append(
                 {
                     "role": "user",
-                    "content": question
+                    "content": user_question,
+                    "pages": [],
                 }
             )
 
-            with st.chat_message(
-                "user"
-            ):
-
-                st.markdown(
-                    question
-                )
+            with st.chat_message("user"):
+                st.write(user_question)
 
 
-            # -----------------------------------------------
-            # Assistant
-            # -----------------------------------------------
-
-            with st.chat_message(
-                "assistant"
-            ):
+            with st.chat_message("assistant"):
 
                 with st.spinner(
                     "Searching the document..."
@@ -1360,112 +733,314 @@ with ask_tab:
 
                     try:
 
-                        results = retrieve(
-                            question,
-                            st.session_state.index,
-                            st.session_state.chunks,
-                            st.session_state.metadata,
-                            top_k=5
+                        retrieved = retrieve(
+                            user_question,
+                            data,
+                            top_k=5,
                         )
 
+                        context = build_context(
+                            retrieved
+                        )
 
                         answer = generate_answer(
-                            question,
-                            results
+                            user_question,
+                            context,
                         )
 
 
-                        # -----------------------------------
-                        # Supporting pages
-                        # -----------------------------------
+                        # Extract page numbers
+                        supporting_pages = []
 
-                        pages = sorted(
-                            {
-                                int(
-                                    result["metadata"]["page"]
+                        for item in retrieved:
+
+                            page = item.get(
+                                "page"
+                            )
+
+                            if page is not None:
+                                supporting_pages.append(
+                                    page
                                 )
 
-                                for result in results
 
-                                if result["metadata"].get(
-                                    "page"
-                                ) is not None
-                            }
-                        )
+                        st.write(answer)
 
 
-                        st.markdown(
-                            answer
-                        )
+                        if supporting_pages:
 
-
-                        if pages:
-
-                            st.caption(
-                                "📄 Supporting pages: "
-                                +
-                                ", ".join(
-                                    map(
-                                        str,
-                                        pages
-                                    )
+                            unique_pages = sorted(
+                                set(
+                                    supporting_pages
                                 )
                             )
 
+                            page_text = ", ".join(
+                                str(p)
+                                for p in unique_pages
+                            )
 
-                        # -----------------------------------
-                        # Save assistant message
-                        # -----------------------------------
+                            st.caption(
+                                f"📍 Supporting pages: {page_text}"
+                            )
 
-                        st.session_state.messages.append(
+
+                        st.session_state.chat_history.append(
                             {
                                 "role": "assistant",
                                 "content": answer,
-                                "pages": pages
+                                "pages": supporting_pages,
                             }
                         )
 
 
-                    except Exception as exc:
-
-                        error_text = (
-                            f"❌ Unable to answer: "
-                            f"{type(exc).__name__}: {exc}"
-                        )
+                    except Exception as e:
 
                         st.error(
-                            error_text
+                            "I couldn't generate an answer."
                         )
 
-                        st.session_state.messages.append(
-                            {
-                                "role": "assistant",
-                                "content": error_text
-                            }
-                        )
+                        with st.expander(
+                            "Technical details"
+                        ):
+                            st.exception(e)
+
+
+        # ----------------------------------------------------
+        # RESET DOCUMENT
+        # ----------------------------------------------------
+
+        st.write("")
+        st.divider()
+
+        reset_col1, reset_col2 = st.columns(
+            [7, 2]
+        )
+
+        with reset_col1:
+            st.caption(
+                "🔒 Your uploaded document is used only for this session."
+            )
+
+        with reset_col2:
+
+            if st.button(
+                "🗑️ Clear document",
+                use_container_width=True,
+            ):
+
+                clear_backend_cache()
+
+                st.session_state.document_data = None
+                st.session_state.document_name = None
+                st.session_state.chat_history = []
+
+                st.rerun()
+
+
+    # --------------------------------------------------------
+    # FOOTER
+    # --------------------------------------------------------
+
+    st.markdown(
+        '<div class="footer">DocuMind • Intelligent PDF Assistant • AI-Powered RAG</div>',
+        unsafe_allow_html=True,
+    )
 
 
 # ============================================================
 # ABOUT TAB
 # ============================================================
 
-with about_tab:
+with tab_about:
 
-    render_about()
+    st.markdown(
+        "## ✨ About DocuMind"
+    )
+
+    st.markdown(
+        """
+        **DocuMind** is an Intelligent Document Assistant
+        designed to let you interact naturally with complex
+        PDF documents.
+        """
+    )
+
+    st.write("")
 
 
-# ============================================================
-# FOOTER
-# ============================================================
+    # --------------------------------------------------------
+    # WHAT IT DOES
+    # --------------------------------------------------------
 
-st.markdown(
-    """
-    <div class="footer">
+    with st.container(border=True):
 
-        DocuMind · Temporary document knowledge base ·
-        Answers are grounded in retrieved PDF content
+        st.markdown(
+            "### 🧠 What does DocuMind do?"
+        )
 
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+        st.write(
+            """
+            DocuMind processes your PDF, extracts meaningful
+            document content, converts that information into
+            searchable representations, retrieves the most
+            relevant sections for your question, and generates
+            an answer grounded in the retrieved document content.
+            """
+        )
+
+
+    st.write("")
+
+
+    # --------------------------------------------------------
+    # FEATURES
+    # --------------------------------------------------------
+
+    st.markdown("### 🚀 Key capabilities")
+
+    f1, f2, f3 = st.columns(3)
+
+    with f1:
+
+        with st.container(border=True):
+
+            st.markdown("### 📄 Text")
+
+            st.write(
+                "Understands structured PDF text and preserves document context."
+            )
+
+    with f2:
+
+        with st.container(border=True):
+
+            st.markdown("### 📊 Tables")
+
+            st.write(
+                "Extracts tables and makes their information searchable."
+            )
+
+    with f3:
+
+        with st.container(border=True):
+
+            st.markdown("### 🖼️ Visuals")
+
+            st.write(
+                "Uses AI-generated descriptions to make visual content searchable."
+            )
+
+
+    st.write("")
+
+
+    # --------------------------------------------------------
+    # RAG PIPELINE
+    # --------------------------------------------------------
+
+    with st.container(border=True):
+
+        st.markdown(
+            "### 🔎 How the RAG pipeline works"
+        )
+
+        st.markdown(
+            """
+            **1. Upload PDF**  
+            Your document is temporarily processed.
+
+            **2. Document parsing**  
+            Docling extracts text, tables and visual content.
+
+            **3. Visual understanding**  
+            Gemini generates descriptions for relevant visual content.
+
+            **4. Chunking**  
+            Document content is divided into searchable chunks.
+
+            **5. Embeddings**  
+            Jina Embeddings converts document chunks into vectors.
+
+            **6. Vector search**  
+            FAISS retrieves the most relevant chunks for your question.
+
+            **7. Answer generation**  
+            Gemini generates an answer using the retrieved document context.
+            """
+        )
+
+
+    st.write("")
+
+
+    # --------------------------------------------------------
+    # USAGE TIPS
+    # --------------------------------------------------------
+
+    with st.container(border=True):
+
+        st.markdown(
+            "### 💡 Tips for better answers"
+        )
+
+        st.markdown(
+            """
+            - Ask specific questions about the document.
+            - Mention a topic, section, table, or page when useful.
+            - For numerical information, ask directly about the relevant table.
+            - For charts, ask the assistant to explain the trend or comparison.
+            - Ask follow-up questions to explore the same document.
+            """
+        )
+
+
+    st.write("")
+
+
+    # --------------------------------------------------------
+    # PRIVACY
+    # --------------------------------------------------------
+
+    with st.container(border=True):
+
+        st.markdown(
+            "### 🔒 Privacy"
+        )
+
+        st.write(
+            """
+            Documents uploaded to DocuMind are processed for the
+            current application session. Avoid uploading confidential
+            or sensitive documents unless you are comfortable with
+            the external AI services configured for this application.
+            """
+        )
+
+
+    st.write("")
+
+
+    # --------------------------------------------------------
+    # SUPPORT
+    # --------------------------------------------------------
+
+    with st.container(border=True):
+
+        st.markdown(
+            "### 🛠️ Support"
+        )
+
+        st.write(
+            """
+            If you encounter a processing or deployment issue,
+            check the Streamlit application logs and verify that
+            the required API secrets are correctly configured.
+            """
+        )
+
+
+    st.markdown(
+        '<div class="footer">DocuMind • Intelligent PDF Assistant</div>',
+        unsafe_allow_html=True,
+    )
