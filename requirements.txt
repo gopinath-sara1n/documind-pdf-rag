@@ -1,5 +1,5 @@
 streamlit
-docling
+docling==2.128.0
 google-genai
 faiss-cpu
 requests
